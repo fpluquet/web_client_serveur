@@ -1,0 +1,17 @@
+{
+  "name": "seance3-nodejs",
+  "version": "1.0.0",
+  "description": "API sécurisée pour la séance 3",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
