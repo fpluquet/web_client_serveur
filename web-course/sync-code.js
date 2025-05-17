@@ -73,13 +73,6 @@ updateMarkdown(
   '//'
 );
 
-// Synchroniser le code PHP pour la séance 1
-updateMarkdown(
-  path.join(DOCS_PATH, 'seance-1.md'),
-  path.join(CODE_PATH, 'seance1', 'php', 'index.php'),
-  '//'
-);
-
 // Synchroniser le code pour les autres séances...
 // ... (ajoutez du code similaire pour les autres séances)
 

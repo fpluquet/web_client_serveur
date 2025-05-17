@@ -9,14 +9,13 @@ Chaque séance est divisée en trois parties :
 1. **Théorie** : concepts fondamentaux à comprendre avant de passer à la pratique
 2. **Application** :  
    - Exemples en Node.js avec Express
-   - Exemples en PHP
 3. **Exercices** : travaux pratiques pour consolider les connaissances
 
 ## Organisation du code
 
 Pour chaque séance :
-- Le code complet des exemples est disponible dans `/code/seanceX/nodejs` et `/code/seanceX/php`
-- Les solutions aux exercices sont disponibles dans `/solutions/seanceX/nodejs` et `/solutions/seanceX/php`
+- Le code complet des exemples est disponible dans `/code/seanceX/`
+- Les solutions aux exercices sont disponibles dans `/solutions/seanceX/`
 
 ## Aperçu des séances
 

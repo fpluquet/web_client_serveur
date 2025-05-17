@@ -1,0 +1,62 @@
+/* Styles pour les diagrammes Mermaid */
+.mermaid-wrapper,
+.mermaid-diagram,
+.mermaid {
+  background-color: #f9f9f9;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  text-align: center;
+  overflow-x: auto;
+}
+
+/* S'assurer que les SVG de Mermaid sont responsives */
+.mermaid svg,
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto !important;
+  margin: 0 auto;
+}
+
+/* Cacher les blocs de code mermaid originaux */
+pre.language-mermaid,
+.mermaid-wrapper pre {
+  display: none;
+}
+
+/* Style global pour le texte dans les diagrammes */
+.mermaid .label {
+  font-family: 'Arial', sans-serif;
+  font-size: 14px;
+}
+
+/* Participants dans les diagrammes de séquence */
+.mermaid .actor {
+  fill: #e3f2fd;
+  stroke: #1976d2;
+  stroke-width: 1px;
+}
+
+/* Noeuds dans les diagrammes flowchart */
+.mermaid .node rect, 
+.mermaid .node circle, 
+.mermaid .node ellipse, 
+.mermaid .node polygon, 
+.mermaid .node path {
+  fill: #e1f5fe;
+  stroke: #0288d1;
+  stroke-width: 1px;
+}
+
+/* Améliorer la visibilité des messages */
+.mermaid .messageText {
+  fill: #333;
+  font-size: 12px;
+}
+
+/* Style pour les flèches */
+.mermaid .messageLine0,
+.mermaid .messageLine1 {
+  stroke: #0288d1;
+  stroke-width: 1.5;
+}

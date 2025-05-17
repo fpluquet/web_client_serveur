@@ -1,0 +1,102 @@
+<svg width="600" height="500" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font-family: Arial; font-size: 24px; font-weight: bold; }
+    .heading { font-family: Arial; font-size: 18px; font-weight: bold; }
+    .table { fill: #f5f5f5; stroke: #333; stroke-width: 1; }
+    .header { fill: #e1e1e1; }
+    .odd-row { fill: #ffffff; }
+    .even-row { fill: #f9f9f9; }
+    .text { font-family: Arial; font-size: 14px; }
+    .form-field { fill: #ffffff; stroke: #ccc; }
+    .button { fill: #0275d8; stroke: #0267bf; }
+    .button-text { font-family: Arial; font-size: 14px; fill: white; }
+    .success { fill: #dff0d8; stroke: #d6e9c6; }
+    .success-text { font-family: Arial; font-size: 14px; fill: #3c763d; }
+  </style>
+  
+  <rect width="600" height="500" fill="white"/>
+  
+  <text x="20" y="40" class="title">Architecture Client-Serveur</text>
+  
+  <!-- Form Section -->
+  <rect x="20" y="60" width="560" height="180" rx="4" fill="#f9f9f9" stroke="#ddd"/>
+  <text x="40" y="90" class="heading">Ajouter un utilisateur</text>
+  
+  <text x="40" y="120" class="text">Nom:</text>
+  <rect x="120" y="105" width="200" height="25" class="form-field" rx="4"/>
+  
+  <text x="40" y="155" class="text">Email:</text>
+  <rect x="120" y="140" width="200" height="25" class="form-field" rx="4"/>
+  
+  <text x="40" y="190" class="text">Rôle:</text>
+  <rect x="120" y="175" width="150" height="25" class="form-field" rx="4"/>
+  <text x="130" y="192" class="text">Utilisateur</text>
+  <polygon points="260,180 260,195 250,187.5" fill="#666"/>
+  
+  <rect x="120" y="210" width="80" height="25" rx="4" class="button"/>
+  <text x="135" y="227" class="button-text">Ajouter</text>
+  
+  <rect x="210" y="210" width="80" height="25" rx="4" fill="#f0f0f0" stroke="#ccc"/>
+  <text x="225" y="227" class="text">Annuler</text>
+  
+  <!-- Success Message -->
+  <rect x="320" y="105" width="250" height="40" rx="4" class="success"/>
+  <text x="330" y="130" class="success-text">Utilisateur ajouté avec succès!</text>
+  
+  <!-- Table -->
+  <rect x="20" y="260" width="560" height="200" class="table" rx="4"/>
+  
+  <!-- Table Header -->
+  <rect x="20" y="260" width="560" height="30" class="header" rx="4"/>
+  <text x="35" y="280" class="heading">ID</text>
+  <text x="80" y="280" class="heading">Nom</text>
+  <text x="220" y="280" class="heading">Email</text>
+  <text x="360" y="280" class="heading">Rôle</text>
+  <text x="450" y="280" class="heading">Actions</text>
+  
+  <!-- Table Rows -->
+  <rect x="20" y="290" width="560" height="40" class="odd-row"/>
+  <text x="35" y="315" class="text">1</text>
+  <text x="80" y="315" class="text">Alice Smith</text>
+  <text x="220" y="315" class="text">alice@example.com</text>
+  <text x="360" y="315" class="text">Admin</text>
+  <rect x="450" y="300" width="50" height="25" rx="4" fill="#0275d8"/>
+  <text x="460" y="315" class="button-text">Voir</text>
+  <rect x="505" y="300" width="50" height="25" rx="4" fill="#5bc0de"/>
+  <text x="515" y="315" class="button-text">Éditer</text>
+  
+  <rect x="20" y="330" width="560" height="40" class="even-row"/>
+  <text x="35" y="355" class="text">2</text>
+  <text x="80" y="355" class="text">Bob Johnson</text>
+  <text x="220" y="355" class="text">bob@example.com</text>
+  <text x="360" y="355" class="text">User</text>
+  <rect x="450" y="340" width="50" height="25" rx="4" fill="#0275d8"/>
+  <text x="460" y="355" class="button-text">Voir</text>
+  <rect x="505" y="340" width="50" height="25" rx="4" fill="#5bc0de"/>
+  <text x="515" y="355" class="button-text">Éditer</text>
+  
+  <rect x="20" y="370" width="560" height="40" class="odd-row"/>
+  <text x="35" y="395" class="text">3</text>
+  <text x="80" y="395" class="text">Charlie Brown</text>
+  <text x="220" y="395" class="text">charlie@example.com</text>
+  <text x="360" y="395" class="text">User</text>
+  <rect x="450" y="380" width="50" height="25" rx="4" fill="#0275d8"/>
+  <text x="460" y="395" class="button-text">Voir</text>
+  <rect x="505" y="380" width="50" height="25" rx="4" fill="#5bc0de"/>
+  <text x="515" y="395" class="button-text">Éditer</text>
+  
+  <rect x="20" y="410" width="560" height="40" class="even-row"/>
+  <text x="35" y="435" class="text">4</text>
+  <text x="80" y="435" class="text">David Lee</text>
+  <text x="220" y="435" class="text">david@example.com</text>
+  <text x="360" y="435" class="text">User</text>
+  <rect x="450" y="420" width="50" height="25" rx="4" fill="#0275d8"/>
+  <text x="460" y="435" class="button-text">Voir</text>
+  <rect x="505" y="420" width="50" height="25" rx="4" fill="#5bc0de"/>
+  <text x="515" y="435" class="button-text">Éditer</text>
+  
+  <!-- Browser Frame -->
+  <rect x="5" y="5" width="590" height="490" stroke="#ccc" stroke-width="2" fill-opacity="0" rx="5"/>
+  <rect x="5" y="5" width="590" height="25" fill="#f0f0f0" rx="5" ry="0"/>
+  <text x="20" y="22" font-family="Arial" font-size="12" fill="#333">http://localhost:3000/</text>
+</svg>
