@@ -1,0 +1,115 @@
+import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
+
+export default withMermaid(defineConfig({
+  lang: 'fr-FR',
+  title: "Cours Web BA2",
+  description: "Syllabus du cours Web Bachelor 2 pour les étudiants de BA2 - HELHa",
+    // Configuration pour la tête de document globale
+  head: [
+    ['link', { rel: 'icon', href: '/favicon.ico' }],
+    // Métadonnées supplémentaires
+    ['meta', { name: 'theme-color', content: '#3eaf7c' }],
+    ['meta', { name: 'apple-mobile-web-app-capable', content: 'yes' }],
+    ['meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'black' }]
+  ],
+  
+  // Configuration de Mermaid
+  mermaid: {
+    theme: 'neutral',
+    darkMode: false,
+    securityLevel: 'loose',
+    logLevel: 'error',
+    htmlLabels: true,
+    flowchart: {
+      htmlLabels: true,
+      useMaxWidth: true,
+      rankSpacing: 65,
+      nodeSpacing: 30,
+      padding: 15
+    },
+    // Styles personnalisés pour améliorer la lisibilité
+    themeVariables: {
+      primaryColor: '#5D8AA8',
+      primaryTextColor: '#fff',
+      primaryBorderColor: '#7C0200',
+      lineColor: '#404040',
+      secondaryColor: '#006100',
+      tertiaryColor: '#fff',
+      nodeBorder: '#2b6387', // Couleur des bordures de nœuds
+      clusterBkg: '#e9f3f8', // Couleur de fond des subgraphs
+      clusterBorder: '#2b6387', // Couleur de bordure des subgraphs
+      titleColor: '#333333' // Couleur du texte des titres
+    }
+  },
+  
+  // Étendre VitePress avec notre plugin Mermaid
+  vite: {
+    plugins: [
+      {
+        name: 'vitepress-mermaid-plugin',
+        configResolved(config) {
+          // S'assurer que notre plugin est correctement chargé
+          console.log('VitePress Mermaid Plugin chargé')
+        }
+      }
+    ]
+  },
+
+  
+  themeConfig: {
+    nav: [
+      { text: 'Accueil', link: '/' },
+      { text: 'Séances', link: '/seances/' }
+    ],    sidebar: {
+      '/seances/': [
+        {
+          text: 'Séances',
+          items: [
+            { text: 'Introduction', link: '/seances/' },
+            { text: 'Séance 1: Architecture Client-Serveur et Client Léger', link: '/seances/seance-1' },
+            { text: 'Séance 2: Architecture Client Lourd', link: '/seances/seance-2' },
+            { text: 'Séance 3', link: '/seances/seance-3' },
+            { text: 'Séance 4', link: '/seances/seance-4' }
+          ]
+        }
+      ]
+    },
+      // Pied de page
+    footer: {
+      message: 'Syllabus créé par Prof. Frédéric Pluquet',
+      copyright: 'Copyright © 2024-2025 HELHa'
+    },
+    
+    // Options de recherche
+    search: {
+      provider: 'local'
+    },
+    
+    // Fonctionnalités sociales
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/helha' }
+    ],
+    
+    // Fonctionnalités supplémentaires
+    outline: {
+      level: 'deep',
+      label: 'Sur cette page'
+    },
+    
+    // Dernier mis à jour
+    lastUpdated: {
+      text: 'Mis à jour le',
+      formatOptions: {
+        dateStyle: 'long',
+        timeStyle: 'short'
+      }
+    },
+
+    // Liens de navigation en bas de page
+    docFooter: {
+      prev: 'Page précédente',
+      next: 'Page suivante'
+    }
+  }
+}))

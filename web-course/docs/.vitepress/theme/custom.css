@@ -1,62 +1,68 @@
-/* Styles pour les diagrammes Mermaid */
-.mermaid-wrapper,
-.mermaid-diagram,
-.mermaid {
-  background-color: #f9f9f9;
-  padding: 1rem;
+::: details logo.png (placeholder)
+This is just a placeholder text. In a real implementation, you would place an actual PNG image file here.
+:::
+
+/* Custom CSS for the VitePress site */
+:root {
+  --vp-c-brand: #2563eb;
+  --vp-c-brand-light: #3b82f6;
+  --vp-c-brand-lighter: #60a5fa;
+  --vp-c-brand-dark: #1d4ed8;
+  --vp-c-brand-darker: #1e40af;
+}
+
+.custom-block.tip {
+  border-color: var(--vp-c-brand);
+}
+
+.custom-block.warning {
+  border-color: #f59e0b;
+}
+
+.custom-block.danger {
+  border-color: #ef4444;
+}
+
+/* Improving code blocks */
+div[class*='language-'] {
   border-radius: 8px;
-  margin: 1.5rem 0;
-  text-align: center;
-  overflow-x: auto;
 }
 
-/* S'assurer que les SVG de Mermaid sont responsives */
-.mermaid svg,
-.mermaid-diagram svg {
-  max-width: 100%;
-  height: auto !important;
-  margin: 0 auto;
+/* Better table styling */
+table {
+  width: 100%;
+  display: table;
+  border-collapse: collapse;
+  margin: 1em 0;
 }
 
-/* Cacher les blocs de code mermaid originaux */
-pre.language-mermaid,
-.mermaid-wrapper pre {
-  display: none;
+tr:nth-child(2n) {
+  background-color: var(--vp-c-bg-soft);
 }
 
-/* Style global pour le texte dans les diagrammes */
-.mermaid .label {
-  font-family: 'Arial', sans-serif;
-  font-size: 14px;
+th, td {
+  border: 1px solid var(--vp-c-divider);
+  padding: 8px 12px;
 }
 
-/* Participants dans les diagrammes de séquence */
-.mermaid .actor {
-  fill: #e3f2fd;
-  stroke: #1976d2;
-  stroke-width: 1px;
+th {
+  font-weight: 600;
+  background-color: var(--vp-c-bg-soft);
 }
 
-/* Noeuds dans les diagrammes flowchart */
-.mermaid .node rect, 
-.mermaid .node circle, 
-.mermaid .node ellipse, 
-.mermaid .node polygon, 
-.mermaid .node path {
-  fill: #e1f5fe;
-  stroke: #0288d1;
-  stroke-width: 1px;
+/* Custom layout adjustments */
+.vp-doc h2 {
+  border-top: 1px solid var(--vp-c-divider);
+  padding-top: 1.5rem;
+  margin-top: 2.5rem;
 }
 
-/* Améliorer la visibilité des messages */
-.mermaid .messageText {
-  fill: #333;
-  font-size: 12px;
+.vp-doc h3 {
+  margin-top: 2rem;
 }
 
-/* Style pour les flèches */
-.mermaid .messageLine0,
-.mermaid .messageLine1 {
-  stroke: #0288d1;
-  stroke-width: 1.5;
+/* Custom footer */
+.VPFooter {
+  border-top: 1px solid var(--vp-c-divider);
+  padding-top: 24px;
 }

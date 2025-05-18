@@ -1,207 +1,171 @@
-# Séance 3 : APIs RESTful et sécurité web
+# Séance 2 : Gestion des données et interaction avec la base de données
 
 ## 1. Théorie
 
-### 1.1 Principes des API RESTful
+### 1.1 Gestion des requêtes HTTP
 
-REST (Representational State Transfer) est un style d'architecture pour la conception d'APIs web.
+#### Méthodes HTTP et leur usage
 
-#### Principes fondamentaux
+- **GET** : Récupération de données
+- **POST** : Création de données
+- **PUT/PATCH** : Mise à jour de données
+- **DELETE** : Suppression de données
 
-- **Interface uniforme** : Ressources identifiées par URLs, actions par méthodes HTTP
-- **Sans état** : Chaque requête contient toutes les informations nécessaires
-- **Cacheable** : Réponses peuvent être marquées cachables ou non
-- **Architecture client-serveur** : Séparation des préoccupations
-- **Système en couches** : Les composants intermédiaires sont invisibles pour le client
+#### Paramètres de requête et corps de requête
 
-#### Bonnes pratiques
+- **Paramètres d'URL** : `?param1=value1&param2=value2`
+- **Corps de requête** : Données formatées (JSON, form-data, etc.)
+- **En-têtes HTTP** : Métadonnées de la requête/réponse
 
-- URLs basées sur les ressources (noms, pas verbes)
-- Utiliser les bons codes de statut HTTP
-- Versionnement des APIs
-- Pagination pour les collections importantes
+### 1.2 Bases de données et ORM
 
-### 1.2 Authentification et autorisation
+#### Types de bases de données
+- **Relationnelles** : MySQL, PostgreSQL
+- **NoSQL** : MongoDB, Redis
 
-#### Méthodes d'authentification
+#### ORM (Object-Relational Mapping)
+- Conversion entre objets en mémoire et tables en base de données
+- Node.js : Sequelize, TypeORM, Prisma
+- PHP : Doctrine, Eloquent
 
-- **Session/Cookie** : Traditionnelle, état stocké côté serveur
-- **JWT** (JSON Web Tokens) : Sans état, information autoportée
-- **OAuth 2.0** : Délégation d'accès
-- **API Keys** : Clés d'identification simples
+### 1.3 Modèle MVC (Modèle-Vue-Contrôleur)
 
-#### Sécurisation des applications
-
-- **HTTPS** : Communication chiffrée
-- **CORS** (Cross-Origin Resource Sharing) : Contrôle des accès cross-origin
-- **CSP** (Content Security Policy) : Protection contre les attaques XSS
-
-### 1.3 Validation et gestion d'erreurs
-
-- **Validation des entrées** : Prévention des injections et attaques
-- **Gestion d'erreurs structurée** : Messages appropriés, logs pertinents
-- **Rate limiting** : Protection contre les abus
+- **Modèle** : Logique métier et accès aux données
+- **Vue** : Présentation des données
+- **Contrôleur** : Coordination entre modèle et vue
 
 ## 2. Application
 
-### 2.1 API RESTful en Node.js/Express
+### 2.1 Gestion des données en Node.js/Express
 
 ::: details Code illustré
 ```javascript
-// Structure de l'API dans des routes séparées
-const express = require('express');
-const router = express.Router();
+// Middleware pour parser le JSON
+app.use(express.json());
 
-// Middleware d'authentification
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+// Stockage temporaire des utilisateurs (à remplacer par une BD)
+let users = [];
+
+// Route pour créer un utilisateur (POST)
+app.post('/users', (req, res) => {
+  const { name, email } = req.body;
   
-  if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Name and email are required' });
   }
   
-  try {
-    // Vérifier le token (simplifié pour l'exemple)
-    const decoded = verifyToken(token);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
-// Routes protégées par authentification
-router.get('/protected-resource', authenticate, (req, res) => {
-  res.json({ 
-    message: 'Access granted', 
-    user: req.user
-  });
+  const newUser = { id: users.length + 1, name, email };
+  users.push(newUser);
+  
+  res.status(201).json(newUser);
 });
 
-// Gestion d'erreurs centralisée
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error: 'Server error',
-    message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message
-  });
+// Route pour obtenir tous les utilisateurs (GET)
+app.get('/users', (req, res) => {
+  res.json(users);
 });
-
-module.exports = router;
 ```
 
-> Le code complet se trouve dans `/code/seance3/nodejs/`
+> Le code complet se trouve dans `/code/seance2/nodejs/`
 :::
 
 #### Points clés :
-- Express permet de créer des middlewares d'authentification réutilisables
-- La gestion d'erreurs centralisée simplifie le traitement des exceptions
-- Les routes peuvent être organisées de manière modulaire
+- Express offre des middlewares pour parser les corps de requête
+- Les statuts HTTP permettent de communiquer le résultat de l'opération
+- Les routes peuvent être organisées par ressource (/users)
 
-### 2.2 API RESTful en PHP
+### 2.2 Gestion des données en PHP
 
 ::: details Code illustré
 ```php
 <?php
-// Middleware d'authentification
-function authenticate() {
-    // Récupérer l'en-tête Authorization
-    $headers = getallheaders();
-    $auth = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-    
-    // Vérifier le format Bearer token
-    if (preg_match('/Bearer\s(\S+)/', $auth, $matches)) {
-        $token = $matches[1];
-        
-        // Vérifier le token (simplifié pour l'exemple)
-        try {
-            $decoded = verifyToken($token);
-            return $decoded;
-        } catch (Exception $e) {
-            header('HTTP/1.1 401 Unauthorized');
-            echo json_encode(['error' => 'Invalid token']);
-            exit;
-        }
+// Simuler une "base de données" avec un tableau
+$users = [];
+
+// Déterminer l'action en fonction de la méthode HTTP
+$method = $_SERVER['REQUEST_METHOD'];
+$route = $_GET['route'] ?? 'home';
+
+// Gérer les requêtes pour la ressource "users"
+if ($route === 'users') {
+    switch ($method) {
+        case 'GET':
+            // Retourner tous les utilisateurs
+            header('Content-Type: application/json');
+            echo json_encode($users);
+            break;
+            
+        case 'POST':
+            // Créer un nouvel utilisateur
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (!isset($data['name']) || !isset($data['email'])) {
+                header('HTTP/1.1 400 Bad Request');
+                echo json_encode(['error' => 'Name and email are required']);
+                break;
+            }
+            
+            $newUser = [
+                'id' => count($users) + 1,
+                'name' => $data['name'],
+                'email' => $data['email']
+            ];
+            
+            $users[] = $newUser;
+            
+            header('HTTP/1.1 201 Created');
+            header('Content-Type: application/json');
+            echo json_encode($newUser);
+            break;
     }
-    
-    // Aucun token valide
-    header('HTTP/1.1 401 Unauthorized');
-    echo json_encode(['error' => 'Authentication required']);
-    exit;
 }
-
-// Route protégée
-if ($route === 'protected-resource') {
-    // Authentifier l'utilisateur avant de continuer
-    $user = authenticate();
-    
-    header('Content-Type: application/json');
-    echo json_encode([
-        'message' => 'Access granted',
-        'user' => $user
-    ]);
-}
-
-// Gestion globale des erreurs
-function handleErrors($errno, $errstr, $errfile, $errline) {
-    header('HTTP/1.1 500 Internal Server Error');
-    header('Content-Type: application/json');
-    
-    $isProduction = getenv('ENVIRONMENT') === 'production';
-    echo json_encode([
-        'error' => 'Server error',
-        'message' => $isProduction ? 'Something went wrong' : $errstr
-    ]);
-    
-    // Terminer le script
-    exit;
-}
-
-// Enregistrer le gestionnaire d'erreur
-set_error_handler('handleErrors');
 ```
 
-> Le code complet se trouve dans `/code/seance3/php/`
+> Le code complet se trouve dans `/code/seance2/php/`
 :::
 
 #### Points clés :
-- Les fonctions permettent de créer des middlewares réutilisables
-- `set_error_handler` centralise la gestion des erreurs
-- La segmentation des fonctionnalités améliore la maintenabilité
+- PHP peut accéder au corps de la requête via `php://input`
+- `json_encode` et `json_decode` permettent de travailler avec le format JSON
+- `$_SERVER['REQUEST_METHOD']` donne accès à la méthode HTTP
 
 ## 3. Exercices
 
-### Exercice 3.1 : API sécurisée avec JWT
+### Exercice 2.1 : API CRUD pour une liste de tâches
 
-**Objectif** : Implémenter un système d'authentification JWT pour sécuriser une API.
+**Objectif** : Créer une API RESTful pour gérer une liste de tâches (todo list).
 
 **Consignes** :
-1. Créez les routes d'authentification suivantes :
-   - `POST /auth/register` : Inscription d'un utilisateur
-   - `POST /auth/login` : Connexion et génération de token JWT
-   - `GET /auth/me` : Récupération des infos utilisateur (route protégée)
+1. Implémentez les routes suivantes :
+   - `GET /tasks` : Liste toutes les tâches
+   - `GET /tasks/:id` : Récupère une tâche spécifique
+   - `POST /tasks` : Crée une nouvelle tâche
+   - `PUT /tasks/:id` : Met à jour une tâche
+   - `DELETE /tasks/:id` : Supprime une tâche
 
-2. Implémentez la validation des données entrantes
+2. Chaque tâche doit avoir :
+   - Un identifiant unique
+   - Un titre
+   - Une description
+   - Un statut (à faire, en cours, terminée)
 
-3. Sécurisez toutes les routes de l'API de tâches (exercice précédent) avec JWT
+3. Implémentez cette API en Node.js/Express et en PHP
 
-4. Implémentez cette API en Node.js/Express et en PHP
+> Les solutions complètes sont disponibles dans `/solutions/seance2/nodejs/` et `/solutions/seance2/php/`
 
-> Les solutions complètes sont disponibles dans `/solutions/seance3/nodejs/` et `/solutions/seance3/php/`
+### Exercice 2.2 : Connexion à une base de données
 
-### Exercice 3.2 : Documentation d'API avec Swagger/OpenAPI
-
-**Objectif** : Documenter l'API de tâches avec Swagger/OpenAPI.
+**Objectif** : Modifier l'API de tâches pour utiliser une base de données.
 
 **Consignes** :
 1. En Node.js/Express :
-   - Installez et configurez swagger-ui-express
-   - Documentez toutes les routes de l'API tâches
-   - Incluez des exemples de requêtes et réponses
+   - Installez et configurez Sequelize avec une base SQLite
+   - Créez un modèle pour les tâches
+   - Modifiez les routes pour utiliser les méthodes de Sequelize
 
 2. En PHP :
-   - Créez un fichier de spécification OpenAPI (YAML ou JSON)
-   - Configurez Swagger UI pour afficher la documentation
-   - Documentez toutes les routes de l'API tâches
+   - Utilisez PDO pour vous connecter à une base SQLite
+   - Créez les requêtes SQL pour CRUD
+   - Modifiez les routes pour utiliser PDO
 
-> Les solutions complètes sont disponibles dans `/solutions/seance3/nodejs/` et `/solutions/seance3/php/`
+> Les solutions complètes sont disponibles dans `/solutions/seance2/nodejs/` et `/solutions/seance2/php/`
