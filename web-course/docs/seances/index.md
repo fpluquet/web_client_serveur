@@ -17,8 +17,4 @@ Pour chaque séance :
 - Le code complet des exemples est disponible dans `/code/seanceX/`
 - Les solutions aux exercices sont disponibles dans `/solutions/seanceX/`
 
-## Aperçu des séances
 
-- [Séance 1](/seances/seance-1) : Introduction aux technologies web backend
-- [Séance 2](/seances/seance-2) : Gestion des données et interaction avec la base de données
-- [Séance 3](/seances/seance-3) : APIs RESTful et sécurité web

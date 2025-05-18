@@ -21,6 +21,7 @@
     "vue": "^3.5.14"
   },
   "dependencies": {
+    "markdown-it-footnote": "^4.0.0",
     "mermaid": "^11.6.0"
   }
 }

@@ -1,4 +1,4 @@
-# Séance 1 : Architecture Client-Serveur et Client Léger
+# Architecture Client-Serveur et Client Léger
 
 ## 1. Théorie
 
@@ -11,7 +11,7 @@ Le web fonctionne selon une architecture client-serveur où :
 Cette architecture constitue la base de presque toutes les applications web modernes.
 
 ```mermaid
-graph LR
+graph TB
     subgraph "Client"
         Browser[Navigateur Web]
     end
@@ -59,12 +59,12 @@ Le client léger repose principalement sur le serveur pour le traitement et la g
 - État de l'application géré par le serveur (sessions, cookies)
 
 **Exemples:** 
-- Sites web traditionnels (avec peu de JavaScript)
+- Sites web traditionnels (avec peu de JavaScript), comme en Web1 BA1
 - Applications web avec rendu côté serveur (Server-Side Rendering)
 - Frameworks comme Django et Ruby on Rails (rendu traditionnel)
 
 ```mermaid
-graph LR
+graph TB
     subgraph "Navigateur (Client Léger)"
         HTML[HTML/CSS rendu]
         Minimal[JavaScript minimal]
@@ -73,15 +73,14 @@ graph LR
         Logic[Logique métier]
         Render[Rendu HTML]
         Data[Gestion des données]
-        Sessions[Gestion des sessions]
     end
     
-    Minimal --->|Actions limitées| HTML
+    Minimal ---> HTML
+    HTML ---> Minimal
     HTML -->|Formulaires/Liens| Render
     Render -->|Pages complètes| HTML
     Logic -->|Contrôle| Render
     Data -->|Fournit| Logic
-    Logic -->|Utilise| Sessions
 ```
 
 #### Client Léger : Cycle de vie d'une requête
@@ -120,14 +119,26 @@ sequenceDiagram
 | Maintenance | Centralisée principalement sur le serveur |
 | Performances | Dépendantes du serveur et du réseau |
 | Expérience utilisateur | Moins fluide (rechargements de page) |
-| SEO | Excellent (tout est généré côté serveur) |
+| SEO[^1] | Excellent (tout est généré côté serveur) |
 | Compatibilité | Très bonne même sur navigateurs anciens |
 | Sécurité | Code critique reste sur le serveur |
 | Consommation réseau | Plus élevée (pages complètes) |
 | Charge serveur | Plus élevée (génération HTML) |
 | Complexité du déploiement | Plus simple (mise à jour centralisée) |
 
+[^1]: SEO : Search Engine Optimization, optimisation pour les moteurs de recherche (Google, Bing, etc.). Cela concerne donc la visibilité et le classement d'un site web dans les résultats de recherche.
+
 ## 2. Pratique : Mise en place d'un serveur web simple
+
+Il est possible d'implémenter un serveur web en utilisant beaucoup de technologies différentes. Dans cette section, nous allons explorer un serveur web simple en utilisant Node.js et Express.js. Nous verrons plus tard comment le faire en PHP.
+
+### 2.0 Prérequis
+
+- Avoir Node.js installé sur votre machine (version 14 ou supérieure)
+- Avoir un éditeur de code (comme Visual Studio Code)
+- Connaissances de base en JavaScript et Node.js
+- Connaissances de base en HTML et CSS
+
 
 ### 2.1 Serveur HTTP basique avec Node.js
 
