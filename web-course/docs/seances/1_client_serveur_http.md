@@ -48,9 +48,144 @@ sequenceDiagram
 ```
 
 
-## 2. Le protocole HTTP
+## 2. Structure d'une URL
 
-### 2.1 Introduction au protocole HTTP
+Avant d'étudier le protocole HTTP, il est essentiel de comprendre la structure d'une **URL** (Uniform Resource Locator), qui est l'adresse utilisée pour identifier et accéder aux ressources sur le web.
+
+### 2.1 Anatomie d'une URL
+
+Une URL complète se compose de plusieurs parties :
+
+```
+https://www.exemple.com:8080/chemin/vers/ressource?param1=valeur1&param2=valeur2#section
+```
+
+#### Décomposition des composants :
+
+| Composant | Valeur dans l'exemple | Description |
+|-----------|----------------------|-------------|
+| **Schéma** | `https://` | Protocole utilisé pour accéder à la ressource |
+| **Host** | `www.exemple.com` | Nom du serveur qui héberge la ressource |
+| **Port** | `:8080` | Numéro du port sur lequel le serveur écoute |
+| **Chemin** | `/chemin/vers/ressource` | Emplacement de la ressource sur le serveur |
+| **Paramètres** | `?param1=valeur1&param2=valeur2` | Données supplémentaires envoyées au serveur |
+| **Fragment** | `#section` | Référence à une section spécifique de la page |
+
+### 2.2 Description des composants
+
+#### 1. **Schéma (Protocole)**
+- **Définition** : Indique le protocole utilisé pour accéder à la ressource
+- **Exemples courants** :
+  - `http://` - HyperText Transfer Protocol (non sécurisé)
+  - `https://` - HTTP Secure (sécurisé avec SSL/TLS)
+  - `ftp://` - File Transfer Protocol
+  - `file://` - Accès aux fichiers locaux
+
+#### 2. **Host (Nom d'hôte)**
+- **Définition** : Identifie le serveur qui héberge la ressource
+- **Formats possibles** :
+  - **Nom de domaine** : `www.exemple.com`, `api.monsite.fr`
+  - **Adresse IP** : `192.168.1.1`, `127.0.0.1` (localhost)
+- **Sous-domaines** : `api.exemple.com`, `blog.exemple.com`
+
+#### 3. **Port**
+- **Définition** : Numéro du port sur lequel le serveur écoute
+- **Comportement** :
+  - **Optionnel** - si omis, utilise le port par défaut du protocole
+  - **HTTP** : port 80 par défaut
+  - **HTTPS** : port 443 par défaut
+- **Exemples** : `:8080`, `:3000`, `:5432`
+
+#### 4. **Chemin (Path)**
+- **Définition** : Spécifie l'emplacement de la ressource sur le serveur
+- **Structure hiérarchique** : `/dossier/sous-dossier/fichier`
+- **Exemples** :
+  - `/` - Page d'accueil
+  - `/users` - Liste des utilisateurs
+  - `/users/123` - Utilisateur avec l'ID 123
+  - `/api/v1/products` - API des produits version 1
+
+#### 5. **Paramètres de requête (Query String)**
+- **Définition** : Données supplémentaires envoyées au serveur
+- **Format** : `?clé1=valeur1&clé2=valeur2`
+- **Syntaxe détaillée** :
+  - **`?`** : Marque le début des paramètres (obligatoire)
+  - **`=`** : Sépare la clé de sa valeur (`clé=valeur`)
+  - **`&`** : Sépare plusieurs paramètres entre eux
+- **Structure** : `?paramètre1=valeur1&paramètre2=valeur2&paramètre3=valeur3`
+- **Utilisations courantes** :
+  - Filtrage : `?category=electronics&price=100`
+  - Pagination : `?page=2&limit=10`
+  - Recherche : `?q=nodejs&sort=date`, `?q=nodejs`, `?sort=date`
+  - Combinaisons : `?search=laptop&category=tech&min_price=500&max_price=1500&sort=price_asc`
+
+#### 6. **Fragment (Anchor)**
+- **Définition** : Référence à une section spécifique de la page
+- **Format** : `#nomDeLaSection`
+- **Comportement** : Traité côté client (navigateur)
+- **Exemples** : `#introduction`, `#chapitre-2`
+
+### 2.3 Exemples pratiques
+
+#### URL simple
+```
+https://www.google.com/
+```
+- **Protocole** : HTTPS
+- **Host** : www.google.com
+- **Port** : 443 (implicite)
+- **Chemin** : / (racine)
+
+#### URL d'API REST
+```
+https://api.github.com:443/users/octocat/repos?type=public&sort=updated
+```
+- **Protocole** : HTTPS
+- **Host** : api.github.com
+- **Port** : 443 (explicite)
+- **Chemin** : /users/octocat/repos
+- **Paramètres** : type=public et sort=updated
+
+#### URL avec fragment
+```
+https://developer.mozilla.org/fr/docs/Web/HTTP#methods
+```
+- **Protocole** : HTTPS
+- **Host** : developer.mozilla.org
+- **Chemin** : /fr/docs/Web/HTTP
+- **Fragment** : #methods
+
+### 2.4 Encodage des URLs
+
+Certains caractères doivent être encodés dans les URLs :
+
+| Caractère | Encodage | Usage |
+|-----------|----------|--------|
+| Espace | `%20` ou `+` | Séparation des mots |
+| `&` | `%26` | Paramètres multiples |
+| `?` | `%3F` | Début des paramètres |
+| `#` | `%23` | Fragment |
+| `%` | `%25` | Encodage |
+
+**Exemple** :
+```
+Original : https://site.com/search?q=hello world&type=article
+Encodé   : https://site.com/search?q=hello%20world&type=article
+```
+
+### 2.5 Conclusion
+
+Maintenant que nous comprenons la structure d'une URL, il est important de noter que :
+
+- Le **client** (navigateur) envoie des **URLs bien formées** au serveur pour identifier précisément la ressource demandée
+- Lorsque le **schéma/protocole** de l'URL est `http:` ou `https:`, le navigateur utilise le **protocole HTTP** pour communiquer avec le serveur
+- Cette communication HTTP suit des règles précises que nous allons détailler dans la section suivante
+
+L'URL constitue donc le "pont" entre le client et le serveur : elle indique **où** se trouve la ressource (host, port, chemin) et **comment** y accéder (protocole HTTP/HTTPS).
+
+## 3. Le protocole HTTP
+
+### 3.1 Introduction au protocole HTTP
 
 Le **protocole HTTP** (HyperText Transfer Protocol) est le langage de communication entre les clients (navigateurs) et les serveurs web. Comprendre HTTP est essentiel pour développer des applications web efficaces.
 
@@ -129,7 +264,7 @@ Server: Node.js
 | **404** | Not Found | Ressource non trouvée |
 | **500** | Internal Server Error | Erreur serveur |
 
-### 2.2 Cycle de vie d'une communication HTTP
+### 3.2 Cycle de vie d'une communication HTTP
 
 ```mermaid
 sequenceDiagram
@@ -149,7 +284,7 @@ sequenceDiagram
     Note over B,S: 10. Ferme la connexion (ou maintient si keep-alive)
 ```
 
-### 2.3 En-têtes HTTP importants
+### 3.3 En-têtes HTTP importants
 
 #### En-têtes de requête courants
 
@@ -172,9 +307,9 @@ sequenceDiagram
 | `Cache-Control` | Directives de mise en cache | `Cache-Control: no-cache, must-revalidate` |
 | `Location` | URL de redirection | `Location: https://example.com/login` |
 
-## 3. Exercices théoriques
+## 4. Exercices théoriques
 
-### Exercice 3.1 : Analyse d'une communication HTTP
+### Exercice 4.1 : Analyse d'une communication HTTP
 
 Analysez la communication HTTP suivante et répondez aux questions :
 
@@ -229,7 +364,7 @@ Cache-Control: max-age=3600
 
 </details>
 
-### Exercice 3.2 : Conception d'une API REST
+### Exercice 4.2 : Conception d'une API REST
 
 Concevez les requêtes HTTP pour une API de gestion de livres avec les opérations suivantes :
 - Récupérer tous les livres
@@ -335,7 +470,7 @@ Code de statut attendu : 204 No Content (si supprimé) ou 404 Not Found (si non 
 </details>
 
 
-### Exercice 3.3 : Exemple d'analyse live
+### Exercice 4.3 : Exemple d'analyse live
 
 Rendez-vous sur votre navigateur web, ouvrez "Google.com" et ouvrez les outils de développement (F12 ou clic droit > Inspecter). Allez dans l'onglet "Réseau" (Network) et rechargez la page (F5).
 

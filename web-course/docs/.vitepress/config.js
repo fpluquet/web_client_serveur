@@ -86,7 +86,7 @@ export default withMermaid(
                 text: "Client Léger vs Lourd",
                 link: "/seances/2_client_leger_lourd",
               },
-              { text: "Node.JS", link: "/seances/3_nodejs" },
+              { text: "Node.js", link: "/seances/3_nodejs" },
               { text: "Express.js", link: "/seances/4_express" },
               { text: "Architecture Client Lourd", link: "/seances/x_client_lourd" },
               { text: "API Rest", link: "/seances/x_api_rest" },
@@ -112,11 +112,15 @@ export default withMermaid(
       // Fonctionnalités sociales
       socialLinks: [{ icon: "github", link: "https://github.com/helha" }],
 
-      // Fonctionnalités supplémentaires
+      // Fonctionnalités supplémentaires - Outline dans la colonne de droite
       outline: {
-        level: "deep",
+        level: [2,3], // Affiche les titres de niveau 2 à 6
         label: "Sur cette page",
       },
+
+      // Configuration pour les libellés
+      outlineTitle: "Sommaire",
+      sidebarMenuLabel: "Menu",
 
       // Dernier mis à jour
       lastUpdated: {
