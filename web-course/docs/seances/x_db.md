@@ -1,4 +1,4 @@
-# Séance 2 : Gestion des données et interaction avec la base de données
+# Gestion des données et interaction avec la base de données
 
 ## 1. Théorie
 

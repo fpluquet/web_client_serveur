@@ -20,3 +20,9 @@ Le cours est divisé en plusieurs séances, chacune contenant:
 1. Consultez la documentation en ligne [ici](#) ou en local en lançant `npm run docs:dev`
 2. Les exemples de code sont disponibles dans le dossier `code/`
 3. Les solutions des exercices sont disponibles dans le dossier `solutions/`
+
+## Chapitres
+
+1. NodeJS
+2. Client léger
+3. Client lourd

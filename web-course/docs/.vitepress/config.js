@@ -71,7 +71,6 @@ export default withMermaid(
     themeConfig: {
       nav: [
         { text: "Accueil", link: "/" },
-        { text: "Chapitres", link: "/seances/" },
       ],
       sidebar: {
         "/seances/": [
@@ -79,14 +78,22 @@ export default withMermaid(
             text: "Chapitres",
             items: [
               { text: "Introduction", link: "/seances/" },
-              { text: "Node.JS", link: "/seances/1_nodejs" },
               {
-                text: "Architecture Client-Serveur et Client Léger",
-                link: "/seances/2_client_leger",
+                text: "Architecture Client-Serveur et HTTP",
+                link: "/seances/1_client_serveur_http",
               },
-              { text: "Architecture Client Lourd", link: "/seances/seance-2" },
-              { text: "Séance 3", link: "/seances/seance-3" },
-              { text: "Séance 4", link: "/seances/seance-4" },
+              {
+                text: "Client Léger vs Lourd",
+                link: "/seances/2_client_leger_lourd",
+              },
+              { text: "Node.JS", link: "/seances/3_nodejs" },
+              { text: "Express.js", link: "/seances/4_express" },
+              { text: "Architecture Client Lourd", link: "/seances/x_client_lourd" },
+              { text: "API Rest", link: "/seances/x_api_rest" },
+              { text: "Base de données", link: "/seances/x_db" },
+              { text: "Sécurité", link: "/seances/x_securite" },
+              { text: "Progressive Web App", link: "/seances/x_pwa" },
+              { text: "Conclusion", link: "/seances/x_conclusion" },
             ],
           },
         ],

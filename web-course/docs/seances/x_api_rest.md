@@ -1,4 +1,4 @@
-# Séance 3 : APIs RESTful et sécurité web
+# APIs RESTful et sécurité web
 
 ## 1. Théorie
 
