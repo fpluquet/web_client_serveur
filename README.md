@@ -49,7 +49,7 @@ Le cours couvre l'architecture web moderne, le développement backend avec Node.
 ### Prérequis
 - Git pour cloner le dépôt
 
-### Installation et lancement
+### Installation et lancement 
 
 ```bash
 # Cloner le dépôt
