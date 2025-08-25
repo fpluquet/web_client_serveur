@@ -1,17 +1,5 @@
 # Sécurité des Applications Web
 
-## Table des matières
-1. [Introduction à la sécurité web](#introduction)
-2. [Les principales vulnérabilités](#vulnerabilites)
-3. [Authentication et autorisation](#auth)
-4. [Sécurisation des communications](#communications)
-5. [Validation et sanitisation des données](#validation)
-6. [Gestion sécurisée des sessions](#sessions)
-7. [Sécurisation côté serveur](#serveur)
-8. [Sécurisation côté client](#client)
-9. [Bonnes pratiques de développement](#bonnes-pratiques)
-10. [Outils et tests de sécurité](#outils)
-11. [Exercices pratiques](#exercices)
 
 ## 1. Introduction à la sécurité web {#introduction}
 

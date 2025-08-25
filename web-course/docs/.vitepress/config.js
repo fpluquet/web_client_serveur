@@ -88,12 +88,13 @@ export default withMermaid(
               },
               { text: "Node.js", link: "/seances/3_nodejs" },
               { text: "Express.js", link: "/seances/4_express" },
-              { text: "Architecture Client Lourd", link: "/seances/x_client_lourd" },
-              { text: "API Rest", link: "/seances/x_api_rest" },
-              { text: "Base de données", link: "/seances/x_db" },
-              { text: "Sécurité", link: "/seances/x_securite" },
-              { text: "Progressive Web App", link: "/seances/x_pwa" },
-              { text: "Conclusion", link: "/seances/x_conclusion" },
+              { text: "Architecture Client Lourd", link: "/seances/5_client_lourd" },
+              { text: "API Rest", link: "/seances/6_api_rest" },
+              { text: "Base de données", link: "/seances/7_db" },
+              { text: "Tests", link: "/seances/8_tests" },
+              { text: "Sécurité", link: "/seances/9_securite" },
+              { text: "Progressive Web App", link: "/seances/10_pwa" },
+              { text: "Conclusion", link: "/seances/11_conclusion" },
             ],
           },
         ],
@@ -110,7 +111,7 @@ export default withMermaid(
       },
 
       // Fonctionnalités sociales
-      socialLinks: [{ icon: "github", link: "https://github.com/helha" }],
+      socialLinks: [{ icon: "github", link: "https://github.com/fpluquet/web_client_serveur" }],
 
       // Fonctionnalités supplémentaires - Outline dans la colonne de droite
       outline: {

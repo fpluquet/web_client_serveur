@@ -1,12 +1,6 @@
 # Architecture Client Lourd
 
-## 1. Théorie
-
-
-
-## 2. Pratique : Création d'un client lourd simple
-
-### 2.1 Mise en place d'une SPA basique avec JavaScript vanilla
+## 1. Mise en place d'une SPA basique avec JavaScript vanilla
 
 Créons une application à page unique simple sans framework :
 
@@ -190,15 +184,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 ```
 
-#### Exercice 2.1: Étendre l'application SPA
+### Exercice 1.1: Étendre l'application SPA
 
 Étendez l'application pour ajouter une nouvelle page "Produits" qui affiche une liste de produits à partir d'un API simulé.
 
-### 2.2 Client lourd avec API REST Express
+## 2. Client lourd avec API REST Express
 
 Pour illustrer un vrai client lourd, créons une application todolist simple qui communique avec un serveur Express via une API REST. Cette architecture sépare clairement le frontend (client lourd) du backend (API).
 
-#### Structure du projet
+### Structure du projet
 
 ```
 todolist-client-lourd/
@@ -214,7 +208,7 @@ todolist-client-lourd/
 └── README.md
 ```
 
-#### Côté serveur (API REST avec Express)
+### Côté serveur (API REST avec Express)
 
 Créons d'abord notre serveur Express qui fournira une API REST simple :
 
@@ -327,7 +321,7 @@ app.listen(PORT, () => {
 }
 ```
 
-#### Côté client (Application JavaScript)
+### Côté client (Application JavaScript)
 
 Maintenant, créons le client lourd qui va consommer notre API :
 
@@ -800,7 +794,7 @@ button[type="submit"]:hover {
 }
 ```
 
-#### Instructions de démarrage
+### Instructions de démarrage
 
 1. **Installation des dépendances du serveur :**
    ```bash
@@ -818,7 +812,7 @@ button[type="submit"]:hover {
 3. **Accès à l'application :**
    Ouvrez votre navigateur et allez à `http://localhost:3000`
 
-#### Exercice 2.2: Étendre l'application todolist
+### Exercice 2.1: Étendre l'application todolist
 
 1. Ajoutez la possibilité de modifier le texte d'une todo existante
 2. Implémentez un système de filtrage (toutes, complétées, en cours)
