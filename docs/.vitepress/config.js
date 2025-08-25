@@ -6,6 +6,7 @@ export default withMermaid(
   defineConfig({
     lang: "fr-FR",
     title: "Cours Web BA2",
+    base: '/web_client_serveur/',
     description:
       "Syllabus du cours Web Bachelor 2 pour les étudiants de BA2 - HELHa",
     // Configuration pour la tête de document globale
