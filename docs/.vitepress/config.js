@@ -103,13 +103,19 @@ export default withMermaid(
       // Pied de page
       footer: {
         message: "Syllabus créé par Prof. Frédéric Pluquet",
-        copyright: "Copyright © 2024-2025 HELHa",
+        copyright: "Copyright © 2025-2026 HELHa",
       },
 
       // Options de recherche
       search: {
         provider: "local",
       },
+
+      editLink: {
+        pattern: 'https://github.com/fpluquet/web_client_serveur/edit/main/docs/:path',
+        text: 'Modifier cette page'
+      },
+
 
       // Fonctionnalités sociales
       socialLinks: [{ icon: "github", link: "https://github.com/fpluquet/web_client_serveur" }],
