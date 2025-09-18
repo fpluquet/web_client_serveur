@@ -415,7 +415,6 @@ Content-Type: application/json
 Accept: application/json
 Authorization: Bearer [token]
 
-Corps de la requête :
 {
   "title": "Le Petit Prince",
   "author": "Antoine de Saint-Exupéry",
@@ -423,9 +422,9 @@ Corps de la requête :
   "publicationYear": 1943,
   "genre": "Littérature"
 }
+```
 
 Code de statut attendu : 201 Created
-```
 
 #### 4. Mettre à jour un livre existant
 ```
