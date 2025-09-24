@@ -438,3 +438,1252 @@ app.get('/users/:userId/posts', (req, res) => {
 ```
 
 Cette approche permet de créer des URLs expressives et intuitives qui reflètent la structure hiérarchique des données tout en offrant des options de personnalisation.
+
+## 7. Middlewares Express
+
+Les **middlewares** sont des fonctions qui s'exécutent pendant le cycle de vie d'une requête-réponse HTTP. Ils ont accès à l'objet de requête (`req`), l'objet de réponse (`res`), et au middleware suivant dans la pile via la fonction `next()`.
+
+Les middlewares permettent de :
+- **Exécuter du code** avant ou après le traitement d'une route
+- **Modifier les objets** `req` et `res` pour les enrichir
+- **Terminer le cycle** requête-réponse
+- **Appeler le middleware suivant** dans la pile
+
+### 7.1 Anatomie d'un middleware
+
+Un middleware Express a la signature suivante :
+
+```javascript
+function monMiddleware(req, res, next) {
+  // Code à exécuter
+  console.log('Middleware exécuté!');
+  
+  // Appeler next() pour passer au middleware suivant
+  next();
+}
+```
+
+**Paramètres :**
+- `req` : L'objet de requête HTTP
+- `res` : L'objet de réponse HTTP  
+- `next` : Fonction pour passer au middleware suivant
+
+**Important :** Si vous n'appelez pas `next()`, la requête restera "suspendue" et le client n'obtiendra jamais de réponse !
+
+### 7.2 Types de middlewares
+
+#### 7.2.1 Middleware au niveau application
+
+Ces middlewares s'exécutent pour **toutes** les requêtes de l'application.
+
+```javascript
+const express = require('express');
+const app = express();
+
+// Middleware de logging pour toutes les requêtes
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.url}`);
+  next(); // Important : passer au middleware suivant
+});
+
+// Middleware pour ajouter un header de sécurité
+app.use((req, res, next) => {
+  res.setHeader('X-Powered-By', 'Mon Super Serveur');
+  next();
+});
+
+// Vos routes normales
+app.get('/', (req, res) => {
+  res.send('Accueil');
+});
+
+app.listen(3000);
+```
+
+#### 7.2.2 Middleware au niveau route
+
+Ces middlewares s'exécutent uniquement pour des routes spécifiques.
+
+```javascript
+// Middleware d'authentification simple
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    return res.status(401).send('Authentification requise');
+  }
+  
+  // Simulation de vérification d'authentification
+  if (authHeader === 'Bearer secret-token') {
+    next(); // Authentifié, continuer
+  } else {
+    res.status(403).send('Token invalide');
+  }
+}
+
+// Utiliser le middleware sur une route spécifique
+app.get('/dashboard', requireAuth, (req, res) => {
+  res.send('Bienvenue dans votre dashboard !');
+});
+
+// Utiliser plusieurs middlewares sur une route
+app.get('/admin', requireAuth, requireAdminRole, (req, res) => {
+  res.send('Panel d\'administration');
+});
+
+function requireAdminRole(req, res, next) {
+  // Logique pour vérifier le rôle admin
+  const isAdmin = true; // Simulation
+  if (isAdmin) {
+    next();
+  } else {
+    res.status(403).send('Accès admin requis');
+  }
+}
+```
+
+#### 7.2.3 Middleware de gestion d'erreurs
+
+Ces middlewares spéciaux ont **4 paramètres** et gèrent les erreurs de l'application.
+
+```javascript
+// Middleware de gestion d'erreurs (doit être à la fin)
+app.use((err, req, res, next) => {
+  console.error('Erreur capturée:', err.message);
+  res.status(500).send('Quelque chose s\'est mal passé !');
+});
+
+// Exemple de route qui génère une erreur
+app.get('/error-test', (req, res, next) => {
+  const error = new Error('Ceci est une erreur de test');
+  next(error); // Passer l'erreur au middleware de gestion d'erreurs
+});
+```
+
+### 7.3 Middlewares intégrés Express
+
+Express fournit quelques middlewares intégrés très utiles :
+
+```javascript
+// Servir des fichiers statiques (CSS, images, JS)
+app.use(express.static('public'));
+
+// Parser le JSON dans les requêtes POST
+app.use(express.json());
+
+// Parser les données de formulaires
+app.use(express.urlencoded({ extended: true }));
+```
+
+### 7.4 Exemple complet avec middlewares
+
+```javascript
+const express = require('express');
+const app = express();
+
+// 1. Middleware de logging (pour toutes les requêtes)
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// 2. Middleware pour parser JSON
+app.use(express.json());
+
+// 3. Middleware pour servir des fichiers statiques
+app.use(express.static('public'));
+
+// 4. Middleware d'authentification personnalisé
+function authenticate(req, res, next) {
+  const token = req.headers.authorization;
+  if (token === 'Bearer abc123') {
+    req.user = { id: 1, name: 'John Doe' }; // Ajouter l'utilisateur à req
+    next();
+  } else {
+    res.status(401).json({ error: 'Token manquant ou invalide' });
+  }
+}
+
+// 5. Routes publiques
+app.get('/', (req, res) => {
+  res.send('Page d\'accueil publique');
+});
+
+app.get('/about', (req, res) => {
+  res.send('À propos - page publique');
+});
+
+// 6. Routes protégées (avec middleware d'authentification)
+app.get('/profile', authenticate, (req, res) => {
+  res.json({
+    message: `Bienvenue ${req.user.name}!`,
+    user: req.user
+  });
+});
+
+app.post('/data', authenticate, (req, res) => {
+  res.json({
+    message: 'Données reçues',
+    user: req.user.name,
+    receivedData: req.body
+  });
+});
+
+// 7. Middleware de gestion des erreurs 404
+app.use((req, res) => {
+  res.status(404).send('Page non trouvée');
+});
+
+// 8. Middleware de gestion d'erreurs générales
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Erreur interne du serveur');
+});
+
+app.listen(3000, () => {
+  console.log('Serveur démarré sur http://localhost:3000');
+});
+```
+
+### 7.5 Ordre d'exécution des middlewares
+
+L'ordre de définition des middlewares est **crucial** car ils s'exécutent séquentiellement :
+
+```javascript
+// ❌ MAUVAIS : Le middleware de logging ne verra jamais les requêtes
+app.get('/', (req, res) => {
+  res.send('Accueil');
+});
+
+app.use((req, res, next) => {
+  console.log('Cette ligne ne s\'exécutera jamais pour "/"');
+  next();
+});
+
+// ✅ BON : Le middleware s'exécute avant les routes
+app.use((req, res, next) => {
+  console.log('Ce middleware s\'exécute pour toutes les requêtes');
+  next();
+});
+
+app.get('/', (req, res) => {
+  res.send('Accueil');
+});
+```
+
+## 8. Routers Express
+
+Quand une application grandit, organiser toutes les routes dans un seul fichier devient rapidement ingérable. Les **routers** Express permettent de créer des groupes modulaires de routes que l'on peut organiser par fonctionnalité.
+
+Un router Express est comme une "mini-application" qui peut avoir ses propres middlewares et routes, puis être "montée" sur l'application principale.
+
+### 8.1 Pourquoi utiliser des routers ?
+
+**Problème sans routers :**
+
+```javascript
+// app.js - Tout dans un seul fichier (difficile à maintenir)
+const express = require('express');
+const app = express();
+
+// Routes utilisateurs
+app.get('/users', (req, res) => { /* ... */ });
+app.get('/users/:id', (req, res) => { /* ... */ });
+app.post('/users', (req, res) => { /* ... */ });
+app.put('/users/:id', (req, res) => { /* ... */ });
+app.delete('/users/:id', (req, res) => { /* ... */ });
+
+// Routes produits
+app.get('/products', (req, res) => { /* ... */ });
+app.get('/products/:id', (req, res) => { /* ... */ });
+app.post('/products', (req, res) => { /* ... */ });
+// ... 50 autres routes ...
+
+// Routes commandes
+app.get('/orders', (req, res) => { /* ... */ });
+// ... encore plus de routes ...
+
+app.listen(3000);
+```
+
+**Solution avec routers :**
+
+```javascript
+// app.js - Application principale propre
+const express = require('express');
+const userRoutes = require('./routes/users');
+const productRoutes = require('./routes/products');
+const orderRoutes = require('./routes/orders');
+
+const app = express();
+
+app.use(express.json());
+
+// Monter les routers
+app.use('/users', userRoutes);
+app.use('/products', productRoutes);
+app.use('/orders', orderRoutes);
+
+app.listen(3000);
+```
+
+### 8.2 Créer un router basique
+
+**Fichier : `routes/users.js`**
+
+```javascript
+const express = require('express');
+const router = express.Router();
+
+// Simuler une base de données d'utilisateurs
+let users = [
+  { id: 1, name: 'Alice', email: 'alice@exemple.com' },
+  { id: 2, name: 'Bob', email: 'bob@exemple.com' },
+  { id: 3, name: 'Charlie', email: 'charlie@exemple.com' }
+];
+
+// GET /users - Lister tous les utilisateurs
+router.get('/', (req, res) => {
+  res.json({
+    message: 'Liste des utilisateurs',
+    users: users
+  });
+});
+
+// GET /users/:id - Obtenir un utilisateur spécifique
+router.get('/:id', (req, res) => {
+  const userId = parseInt(req.params.id);
+  const user = users.find(u => u.id === userId);
+  
+  if (!user) {
+    return res.status(404).json({ error: 'Utilisateur non trouvé' });
+  }
+  
+  res.json({
+    message: 'Utilisateur trouvé',
+    user: user
+  });
+});
+
+// POST /users - Créer un nouvel utilisateur
+router.post('/', (req, res) => {
+  const { name, email } = req.body;
+  
+  if (!name || !email) {
+    return res.status(400).json({ 
+      error: 'Le nom et l\'email sont requis' 
+    });
+  }
+  
+  const newUser = {
+    id: users.length + 1,
+    name: name,
+    email: email
+  };
+  
+  users.push(newUser);
+  
+  res.status(201).json({
+    message: 'Utilisateur créé',
+    user: newUser
+  });
+});
+
+// PUT /users/:id - Mettre à jour un utilisateur
+router.put('/:id', (req, res) => {
+  const userId = parseInt(req.params.id);
+  const userIndex = users.findIndex(u => u.id === userId);
+  
+  if (userIndex === -1) {
+    return res.status(404).json({ error: 'Utilisateur non trouvé' });
+  }
+  
+  const { name, email } = req.body;
+  
+  if (name) users[userIndex].name = name;
+  if (email) users[userIndex].email = email;
+  
+  res.json({
+    message: 'Utilisateur mis à jour',
+    user: users[userIndex]
+  });
+});
+
+// DELETE /users/:id - Supprimer un utilisateur
+router.delete('/:id', (req, res) => {
+  const userId = parseInt(req.params.id);
+  const userIndex = users.findIndex(u => u.id === userId);
+  
+  if (userIndex === -1) {
+    return res.status(404).json({ error: 'Utilisateur non trouvé' });
+  }
+  
+  const deletedUser = users.splice(userIndex, 1)[0];
+  
+  res.json({
+    message: 'Utilisateur supprimé',
+    user: deletedUser
+  });
+});
+
+module.exports = router;
+```
+
+**Fichier : `app.js`**
+
+```javascript
+const express = require('express');
+const userRoutes = require('./routes/users');
+
+const app = express();
+
+// Middlewares globaux
+app.use(express.json());
+
+// Monter le router users sur le préfixe /users
+app.use('/users', userRoutes);
+
+// Route d'accueil
+app.get('/', (req, res) => {
+  res.json({
+    message: 'API démarrée',
+    endpoints: [
+      'GET /users - Liste des utilisateurs',
+      'GET /users/:id - Détails d\'un utilisateur',
+      'POST /users - Créer un utilisateur',
+      'PUT /users/:id - Modifier un utilisateur',
+      'DELETE /users/:id - Supprimer un utilisateur'
+    ]
+  });
+});
+
+app.listen(3000, () => {
+  console.log('Serveur démarré sur http://localhost:3000');
+});
+```
+
+### 8.3 Router avec middlewares spécifiques
+
+Les routers peuvent avoir leurs propres middlewares qui ne s'appliquent qu'aux routes de ce router :
+
+**Fichier : `routes/admin.js`**
+
+```javascript
+const express = require('express');
+const router = express.Router();
+
+// Middleware spécifique au router admin
+router.use((req, res, next) => {
+  console.log('Accès à la section admin:', new Date().toISOString());
+  next();
+});
+
+// Middleware d'authentification admin
+router.use((req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (authHeader !== 'Bearer admin-token') {
+    return res.status(403).json({ error: 'Accès admin requis' });
+  }
+  
+  next();
+});
+
+// Routes admin (toutes protégées par les middlewares ci-dessus)
+router.get('/dashboard', (req, res) => {
+  res.json({
+    message: 'Dashboard admin',
+    stats: {
+      users: 150,
+      orders: 45,
+      revenue: '12,345€'
+    }
+  });
+});
+
+router.get('/users', (req, res) => {
+  res.json({
+    message: 'Gestion des utilisateurs admin',
+    actions: ['view', 'edit', 'delete', 'ban']
+  });
+});
+
+router.delete('/users/:id', (req, res) => {
+  const userId = req.params.id;
+  res.json({
+    message: `Utilisateur ${userId} supprimé par admin`
+  });
+});
+
+module.exports = router;
+```
+
+### 8.4 Router avec paramètres et sous-routers
+
+Vous pouvez créer des structures de routes complexes avec des routers imbriqués :
+
+**Fichier : `routes/blog.js`**
+
+```javascript
+const express = require('express');
+const router = express.Router();
+
+// Simuler des données de blog
+const posts = [
+  { id: 1, title: 'Introduction à Node.js', content: 'Node.js est...', authorId: 1 },
+  { id: 2, title: 'Express.js avancé', content: 'Express permet...', authorId: 2 }
+];
+
+const comments = [
+  { id: 1, postId: 1, author: 'Alice', content: 'Super article !' },
+  { id: 2, postId: 1, author: 'Bob', content: 'Très instructif' },
+  { id: 3, postId: 2, author: 'Charlie', content: 'J\'ai appris beaucoup' }
+];
+
+// Routes pour les posts
+router.get('/', (req, res) => {
+  res.json({
+    message: 'Liste des articles de blog',
+    posts: posts
+  });
+});
+
+router.get('/:postId', (req, res) => {
+  const postId = parseInt(req.params.postId);
+  const post = posts.find(p => p.id === postId);
+  
+  if (!post) {
+    return res.status(404).json({ error: 'Article non trouvé' });
+  }
+  
+  res.json({
+    message: 'Article trouvé',
+    post: post
+  });
+});
+
+// Routes pour les commentaires d'un post
+router.get('/:postId/comments', (req, res) => {
+  const postId = parseInt(req.params.postId);
+  const postComments = comments.filter(c => c.postId === postId);
+  
+  res.json({
+    message: `Commentaires pour l'article ${postId}`,
+    comments: postComments
+  });
+});
+
+router.post('/:postId/comments', (req, res) => {
+  const postId = parseInt(req.params.postId);
+  const { author, content } = req.body;
+  
+  if (!author || !content) {
+    return res.status(400).json({ 
+      error: 'Auteur et contenu requis' 
+    });
+  }
+  
+  const newComment = {
+    id: comments.length + 1,
+    postId: postId,
+    author: author,
+    content: content
+  };
+  
+  comments.push(newComment);
+  
+  res.status(201).json({
+    message: 'Commentaire ajouté',
+    comment: newComment
+  });
+});
+
+module.exports = router;
+```
+
+### 8.5 Application complète avec plusieurs routers
+
+**Structure de fichiers :**
+```
+project/
+├── app.js
+├── package.json
+└── routes/
+    ├── users.js
+    ├── admin.js
+    └── blog.js
+```
+
+**Fichier : `app.js`**
+
+```javascript
+const express = require('express');
+const userRoutes = require('./routes/users');
+const adminRoutes = require('./routes/admin');
+const blogRoutes = require('./routes/blog');
+
+const app = express();
+
+// Middlewares globaux
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Middleware de logging global
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
+// Monter les routers avec leurs préfixes
+app.use('/users', userRoutes);      // Routes : /users/*
+app.use('/admin', adminRoutes);     // Routes : /admin/*
+app.use('/blog', blogRoutes);       // Routes : /blog/*
+
+// Route d'accueil avec documentation API
+app.get('/', (req, res) => {
+  res.json({
+    message: 'API Multi-Router Example',
+    version: '1.0.0',
+    endpoints: {
+      users: [
+        'GET /users - Liste des utilisateurs',
+        'GET /users/:id - Détails d\'un utilisateur',
+        'POST /users - Créer un utilisateur',
+        'PUT /users/:id - Modifier un utilisateur',
+        'DELETE /users/:id - Supprimer un utilisateur'
+      ],
+      admin: [
+        'GET /admin/dashboard - Dashboard admin (auth requise)',
+        'GET /admin/users - Gestion utilisateurs (auth requise)',
+        'DELETE /admin/users/:id - Supprimer utilisateur (auth requise)'
+      ],
+      blog: [
+        'GET /blog - Liste des articles',
+        'GET /blog/:postId - Détails d\'un article',
+        'GET /blog/:postId/comments - Commentaires d\'un article',
+        'POST /blog/:postId/comments - Ajouter un commentaire'
+      ]
+    }
+  });
+});
+
+// Middleware 404 pour les routes non trouvées
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Endpoint non trouvé',
+    requested: `${req.method} ${req.url}`,
+    suggestion: 'Voir GET / pour la liste des endpoints disponibles'
+  });
+});
+
+// Middleware de gestion d'erreurs
+app.use((err, req, res, next) => {
+  console.error('Erreur:', err.message);
+  res.status(500).json({
+    error: 'Erreur interne du serveur',
+    message: err.message
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+  console.log(`📖 Documentation API : http://localhost:${PORT}/`);
+});
+```
+
+### 8.6 Tests des endpoints avec des exemples curl
+
+Une fois votre serveur démarré, vous pouvez tester vos endpoints :
+
+```bash
+# Tester la route d'accueil
+curl http://localhost:3000/
+
+# Tester les utilisateurs
+curl http://localhost:3000/users
+curl http://localhost:3000/users/1
+
+# Créer un utilisateur
+curl -X POST http://localhost:3000/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"David","email":"david@exemple.com"}'
+
+# Tester le blog
+curl http://localhost:3000/blog
+curl http://localhost:3000/blog/1/comments
+
+# Tester l'admin (va échouer sans auth)
+curl http://localhost:3000/admin/dashboard
+
+# Tester l'admin avec authentification
+curl http://localhost:3000/admin/dashboard \
+  -H "Authorization: Bearer admin-token"
+```
+
+Cette approche modulaire avec des routers permet de :
+- **Organiser** le code de manière logique
+- **Réutiliser** des middlewares spécifiques
+- **Maintenir** facilement l'application
+- **Collaborer** efficacement en équipe (chaque développeur peut travailler sur un router différent)
+
+## 9. Exercices pratiques
+
+### Exercice 1 : Premier serveur Express
+
+**Objectif :** Créer un serveur Express basique avec plusieurs routes simples.
+
+**Consigne :**
+1. Créez un fichier `app.js` qui utilise Express
+2. Créez les routes suivantes :
+   - `GET /` qui retourne `"Bienvenue sur mon serveur Express!"`
+   - `GET /about` qui retourne `"À propos : Ce serveur a été créé avec Express.js"`
+   - `GET /contact` qui retourne `"Contact : email@exemple.com"`
+3. Le serveur doit écouter sur le port 3000
+4. Ajoutez une route pour gérer les pages non trouvées (404)
+
+**Sortie attendue :**
+- `GET http://localhost:3000/` → `"Bienvenue sur mon serveur Express!"`
+- `GET http://localhost:3000/about` → `"À propos : Ce serveur a été créé avec Express.js"`
+- `GET http://localhost:3000/contact` → `"Contact : email@exemple.com"`
+- `GET http://localhost:3000/inexistant` → Status 404 + message d'erreur
+
+<details>
+<summary>🔍 Solution Exercice 1</summary>
+
+```javascript
+const express = require('express');
+const app = express();
+
+// Routes principales
+app.get('/', (req, res) => {
+  res.send('Bienvenue sur mon serveur Express!');
+});
+
+app.get('/about', (req, res) => {
+  res.send('À propos : Ce serveur a été créé avec Express.js');
+});
+
+app.get('/contact', (req, res) => {
+  res.send('Contact : email@exemple.com');
+});
+
+// Route 404 (doit être à la fin)
+app.use((req, res) => {
+  res.status(404).send('Page non trouvée');
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur http://localhost:${PORT}`);
+});
+```
+
+</details>
+
+### Exercice 2 : Paramètres de route et query parameters
+
+**Objectif :** Comprendre l'utilisation des paramètres de route et des query parameters.
+
+**Consigne :**
+Créez un serveur avec les routes suivantes :
+1. `GET /users/:id` qui retourne `"Utilisateur ID: {id}"`
+2. `GET /products/:category/:id` qui retourne `"Produit {id} dans la catégorie {category}"`
+3. `GET /search` qui utilise les query parameters `q` et `limit` pour retourner :
+   `"Recherche: {q}, Limite: {limit}"`
+   Si `limit` n'est pas fourni, utilisez la valeur par défaut 10
+
+**Sortie attendue :**
+- `GET /users/123` → `"Utilisateur ID: 123"`
+- `GET /products/electronique/456` → `"Produit 456 dans la catégorie electronique"`
+- `GET /search?q=javascript&limit=5` → `"Recherche: javascript, Limite: 5"`
+- `GET /search?q=nodejs` → `"Recherche: nodejs, Limite: 10"`
+
+<details>
+<summary>🔍 Solution Exercice 2</summary>
+
+```javascript
+const express = require('express');
+const app = express();
+
+app.get('/users/:id', (req, res) => {
+  const id = req.params.id;
+  res.send(`Utilisateur ID: ${id}`);
+});
+
+app.get('/products/:category/:id', (req, res) => {
+  const { category, id } = req.params;
+  res.send(`Produit ${id} dans la catégorie ${category}`);
+});
+
+app.get('/search', (req, res) => {
+  const q = req.query.q;
+  const limit = req.query.limit || 10;
+  res.send(`Recherche: ${q}, Limite: ${limit}`);
+});
+
+app.listen(3000, () => {
+  console.log('Serveur démarré sur http://localhost:3000');
+});
+```
+
+</details>
+
+### Exercice 3 : Middleware de logging
+
+**Objectif :** Créer et utiliser un middleware personnalisé.
+
+**Consigne :**
+1. Créez un middleware qui log chaque requête avec le format :
+   `"[TIMESTAMP] METHODE URL"`
+2. Appliquez ce middleware à toutes les routes
+3. Créez trois routes simples (`/`, `/test`, `/api`) qui retournent des messages différents
+
+**Sortie attendue dans la console :**
+```
+[2025-09-24T10:30:45.123Z] GET /
+[2025-09-24T10:30:47.456Z] GET /test
+[2025-09-24T10:30:50.789Z] POST /api
+```
+
+<details>
+<summary>🔍 Solution Exercice 3</summary>
+
+```javascript
+const express = require('express');
+const app = express();
+
+// Middleware de logging
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.url}`);
+  next();
+});
+
+// Routes
+app.get('/', (req, res) => {
+  res.send('Page d\'accueil');
+});
+
+app.get('/test', (req, res) => {
+  res.send('Page de test');
+});
+
+app.get('/api', (req, res) => {
+  res.send('API endpoint');
+});
+
+app.listen(3000, () => {
+  console.log('Serveur démarré sur http://localhost:3000');
+});
+```
+
+</details>
+
+### Exercice 4 : Middleware d'authentification simple
+
+**Objectif :** Créer un middleware d'authentification et l'appliquer à des routes spécifiques.
+
+**Consigne :**
+1. Créez un middleware `requireAuth` qui vérifie la présence du header `authorization`
+2. Si le header vaut `"Bearer secret123"`, autoriser l'accès
+3. Sinon, retourner une erreur 401 avec le message `"Accès non autorisé"`
+4. Créez les routes :
+   - `GET /public` (accessible à tous) → `"Page publique"`
+   - `GET /private` (protégée) → `"Page privée - accès autorisé"`
+   - `GET /admin` (protégée) → `"Panel admin - accès autorisé"`
+
+**Sortie attendue :**
+- `GET /public` → `"Page publique"` (200)
+- `GET /private` → `"Accès non autorisé"` (401)
+- `GET /private` avec `Authorization: Bearer secret123` → `"Page privée - accès autorisé"` (200)
+
+<details>
+<summary>🔍 Solution Exercice 4</summary>
+
+```javascript
+const express = require('express');
+const app = express();
+
+// Middleware d'authentification
+function requireAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  
+  if (auth === 'Bearer secret123') {
+    next(); // Accès autorisé, passer au middleware suivant
+  } else {
+    res.status(401).send('Accès non autorisé');
+  }
+}
+
+// Route publique
+app.get('/public', (req, res) => {
+  res.send('Page publique');
+});
+
+// Routes protégées
+app.get('/private', requireAuth, (req, res) => {
+  res.send('Page privée - accès autorisé');
+});
+
+app.get('/admin', requireAuth, (req, res) => {
+  res.send('Panel admin - accès autorisé');
+});
+
+app.listen(3000, () => {
+  console.log('Serveur démarré sur http://localhost:3000');
+});
+```
+
+</details>
+
+### Exercice 5 : API JSON avec POST
+
+**Objectif :** Créer une API qui gère les données JSON en GET et POST.
+
+**Consigne :**
+1. Configurez Express pour parser le JSON
+2. Créez un tableau `users` en mémoire avec quelques utilisateurs de test
+3. Implémentez les routes :
+   - `GET /api/users` → Retourner tous les utilisateurs en JSON
+   - `GET /api/users/:id` → Retourner un utilisateur spécifique ou erreur 404
+   - `POST /api/users` → Ajouter un nouvel utilisateur (avec validation)
+4. Pour le POST, vérifiez que `name` et `email` sont fournis
+
+**Sortie attendue :**
+- `GET /api/users` → `{"users": [{"id": 1, "name": "Alice", "email": "alice@test.com"}, ...]}`
+- `GET /api/users/1` → `{"user": {"id": 1, "name": "Alice", "email": "alice@test.com"}}`
+- `GET /api/users/999` → Status 404 + `{"error": "Utilisateur non trouvé"}`
+- `POST /api/users` avec body `{"name": "Bob", "email": "bob@test.com"}` → Status 201 + utilisateur créé
+
+<details>
+<summary>🔍 Solution Exercice 5</summary>
+
+```javascript
+const express = require('express');
+const app = express();
+
+// Middleware pour parser JSON
+app.use(express.json());
+
+// Base de données simulée
+let users = [
+  { id: 1, name: 'Alice', email: 'alice@test.com' },
+  { id: 2, name: 'Bob', email: 'bob@test.com' }
+];
+let nextId = 3;
+
+// GET tous les utilisateurs
+app.get('/api/users', (req, res) => {
+  res.json({ users: users });
+});
+
+// GET un utilisateur spécifique
+app.get('/api/users/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const user = users.find(u => u.id === id);
+  
+  if (!user) {
+    return res.status(404).json({ error: 'Utilisateur non trouvé' });
+  }
+  
+  res.json({ user: user });
+});
+
+// POST créer un utilisateur
+app.post('/api/users', (req, res) => {
+  const { name, email } = req.body;
+  
+  // Validation
+  if (!name || !email) {
+    return res.status(400).json({ 
+      error: 'Le nom et l\'email sont requis' 
+    });
+  }
+  
+  const newUser = {
+    id: nextId++,
+    name: name,
+    email: email
+  };
+  
+  users.push(newUser);
+  
+  res.status(201).json({ 
+    message: 'Utilisateur créé', 
+    user: newUser 
+  });
+});
+
+app.listen(3000, () => {
+  console.log('API démarrée sur http://localhost:3000');
+});
+```
+
+</details>
+
+### Exercice 6 : Router modulaire
+
+**Objectif :** Organiser le code avec des routers Express.
+
+**Consigne :**
+1. Créez un dossier `routes` avec un fichier `products.js`
+2. Dans `products.js`, créez un router avec les routes :
+   - `GET /` → Liste des produits
+   - `GET /:id` → Détails d'un produit
+   - `POST /` → Ajouter un produit
+3. Dans `app.js`, montez ce router sur le préfixe `/products`
+4. Ajoutez aussi une route d'accueil `GET /` dans `app.js`
+
+**Structure attendue :**
+```
+projet/
+├── app.js
+└── routes/
+    └── products.js
+```
+
+**Sortie attendue :**
+- `GET /` → Message d'accueil
+- `GET /products` → Liste des produits
+- `GET /products/1` → Détails du produit 1
+- `POST /products` → Créer un produit
+
+<details>
+<summary>🔍 Solution Exercice 6</summary>
+
+**Fichier : `routes/products.js`**
+```javascript
+const express = require('express');
+const router = express.Router();
+
+// Base de données simulée
+let products = [
+  { id: 1, name: 'Ordinateur', price: 800 },
+  { id: 2, name: 'Souris', price: 25 }
+];
+let nextId = 3;
+
+// GET tous les produits
+router.get('/', (req, res) => {
+  res.json({ products: products });
+});
+
+// GET un produit spécifique
+router.get('/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const product = products.find(p => p.id === id);
+  
+  if (!product) {
+    return res.status(404).json({ error: 'Produit non trouvé' });
+  }
+  
+  res.json({ product: product });
+});
+
+// POST créer un produit
+router.post('/', (req, res) => {
+  const { name, price } = req.body;
+  
+  if (!name || !price) {
+    return res.status(400).json({ 
+      error: 'Le nom et le prix sont requis' 
+    });
+  }
+  
+  const newProduct = {
+    id: nextId++,
+    name: name,
+    price: parseFloat(price)
+  };
+  
+  products.push(newProduct);
+  
+  res.status(201).json({ 
+    message: 'Produit créé', 
+    product: newProduct 
+  });
+});
+
+module.exports = router;
+```
+
+**Fichier : `app.js`**
+```javascript
+const express = require('express');
+const productRoutes = require('./routes/products');
+
+const app = express();
+
+// Middlewares
+app.use(express.json());
+
+// Route d'accueil
+app.get('/', (req, res) => {
+  res.json({
+    message: 'API E-commerce',
+    endpoints: [
+      'GET /products - Liste des produits',
+      'GET /products/:id - Détails d\'un produit',
+      'POST /products - Créer un produit'
+    ]
+  });
+});
+
+// Monter le router products
+app.use('/products', productRoutes);
+
+app.listen(3000, () => {
+  console.log('Serveur démarré sur http://localhost:3000');
+});
+```
+
+</details>
+
+### Exercice 7 : Application complète avec middlewares et routers
+
+**Objectif :** Combiner tous les concepts vus dans un exercice plus complet.
+
+**Consigne :**
+1. Créez une API de gestion de tâches (todo) avec :
+   - Un middleware de logging global
+   - Un router `tasks.js` pour gérer les tâches
+   - Un middleware d'authentification sur certaines routes
+2. Structure des tâches : `{ id, title, completed, createdAt }`
+3. Routes à implémenter :
+   - `GET /` → Documentation de l'API (public)
+   - `GET /tasks` → Lister les tâches (protégé)
+   - `POST /tasks` → Créer une tâche (protégé)
+   - `PUT /tasks/:id/complete` → Marquer une tâche comme terminée (protégé)
+
+**Sortie attendue :**
+- Console : Logs de toutes les requêtes
+- `GET /tasks` sans auth → Status 401
+- `GET /tasks` avec `Authorization: Bearer task-token` → Liste des tâches
+- `POST /tasks` avec body valide → Tâche créée (Status 201)
+
+<details>
+<summary>🔍 Solution Exercice 7</summary>
+
+**Fichier : `routes/tasks.js`**
+```javascript
+const express = require('express');
+const router = express.Router();
+
+// Base de données simulée
+let tasks = [
+  { 
+    id: 1, 
+    title: 'Apprendre Express.js', 
+    completed: false, 
+    createdAt: new Date().toISOString() 
+  }
+];
+let nextId = 2;
+
+// Middleware d'authentification pour ce router
+router.use((req, res, next) => {
+  const auth = req.headers.authorization;
+  
+  if (auth !== 'Bearer task-token') {
+    return res.status(401).json({ error: 'Authentification requise' });
+  }
+  
+  next();
+});
+
+// GET toutes les tâches
+router.get('/', (req, res) => {
+  res.json({ tasks: tasks });
+});
+
+// POST créer une tâche
+router.post('/', (req, res) => {
+  const { title } = req.body;
+  
+  if (!title) {
+    return res.status(400).json({ error: 'Le titre est requis' });
+  }
+  
+  const newTask = {
+    id: nextId++,
+    title: title,
+    completed: false,
+    createdAt: new Date().toISOString()
+  };
+  
+  tasks.push(newTask);
+  
+  res.status(201).json({ 
+    message: 'Tâche créée', 
+    task: newTask 
+  });
+});
+
+// PUT marquer une tâche comme terminée
+router.put('/:id/complete', (req, res) => {
+  const id = parseInt(req.params.id);
+  const task = tasks.find(t => t.id === id);
+  
+  if (!task) {
+    return res.status(404).json({ error: 'Tâche non trouvée' });
+  }
+  
+  task.completed = true;
+  
+  res.json({ 
+    message: 'Tâche marquée comme terminée', 
+    task: task 
+  });
+});
+
+module.exports = router;
+```
+
+**Fichier : `app.js`**
+```javascript
+const express = require('express');
+const taskRoutes = require('./routes/tasks');
+
+const app = express();
+
+// Middlewares globaux
+app.use(express.json());
+
+// Middleware de logging global
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.url}`);
+  next();
+});
+
+// Route d'accueil (publique)
+app.get('/', (req, res) => {
+  res.json({
+    message: 'API de gestion de tâches',
+    version: '1.0.0',
+    endpoints: [
+      'GET /tasks - Lister les tâches (auth requise)',
+      'POST /tasks - Créer une tâche (auth requise)', 
+      'PUT /tasks/:id/complete - Terminer une tâche (auth requise)'
+    ],
+    auth: 'Utiliser le header Authorization: Bearer task-token'
+  });
+});
+
+// Monter le router des tâches
+app.use('/tasks', taskRoutes);
+
+// Middleware 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint non trouvé' });
+});
+
+app.listen(3000, () => {
+  console.log('🚀 API Todo démarrée sur http://localhost:3000');
+});
+```
+
+</details>
+
