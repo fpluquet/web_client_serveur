@@ -519,6 +519,987 @@ Si aucun chemin n'est spécifié, le programme analysera le répertoire courant 
 - La variable `__dirname` contient le chemin absolu du répertoire dans lequel se trouve le script en cours d'exécution. Cela permet de s'assurer que les chemins relatifs sont correctement résolus, peu importe où le script est exécuté.
 :::
 
+## Exercices pratiques Node.js
+
+### Exercice 1 : Premiers pas avec Node.js
+
+Créez un script Node.js qui :
+1. Affiche "Bonjour, je suis [votre prénom]" dans la console
+2. Affiche la date et l'heure actuelles
+3. Utilise `process.argv` pour récupérer des arguments en ligne de commande et les affiche
+
+**Exemples de sortie attendue :**
+
+```bash
+# Exécution : node script.js
+Bonjour, je suis Alice
+Date actuelle : 24/09/2025
+Heure actuelle : 14:30:25
+
+Arguments reçus :
+```
+
+```bash
+# Exécution : node script.js hello world "test avec espaces"
+Bonjour, je suis Alice
+Date actuelle : 24/09/2025
+Heure actuelle : 14:30:25
+
+Arguments reçus :
+Argument 1: hello
+Argument 2: world
+Argument 3: test avec espaces
+```
+
+<details>
+<summary>Solution Exercice 1</summary>
+
+```javascript
+// script.js
+
+// 1. Afficher un message personnalisé
+const prenom = "Alice"; // Remplacez par votre prénom
+console.log(`Bonjour, je suis ${prenom}`);
+
+// 2. Afficher la date et l'heure actuelles
+const maintenant = new Date();
+console.log(`Date actuelle : ${maintenant.toLocaleDateString()}`);
+console.log(`Heure actuelle : ${maintenant.toLocaleTimeString()}`);
+
+// 3. Afficher les arguments en ligne de commande
+console.log('\nArguments reçus :');
+process.argv.forEach((arg, index) => {
+  if (index >= 2) { // Les 2 premiers sont 'node' et le nom du script
+    console.log(`Argument ${index - 1}: ${arg}`);
+  }
+});
+
+// Exécution : node script.js arg1 arg2 "argument avec espaces"
+```
+
+</details>
+
+### Exercice 2 : Calculatrice en ligne de commande
+
+Créez une calculatrice simple qui prend deux nombres et une opération en paramètres :
+- `node calculatrice.js 10 + 5` → devrait afficher 15
+- Gérez les opérations : +, -, *, /
+- Ajoutez une validation des entrées
+
+**Exemples de sortie attendue :**
+
+```bash
+# Exécution : node calculatrice.js 10 + 5
+10 + 5 = 15
+```
+
+```bash
+# Exécution : node calculatrice.js 20 / 4
+20 / 4 = 5
+```
+
+```bash
+# Exécution : node calculatrice.js 15 * 3.5
+15 * 3.5 = 52.5
+```
+
+```bash
+# Exécution : node calculatrice.js 10 / 0
+Erreur: Division par zéro impossible
+```
+
+```bash
+# Exécution : node calculatrice.js 10
+Usage: node calculatrice.js <nombre1> <opération> <nombre2>
+Opérations supportées: +, -, *, /
+```
+
+```bash
+# Exécution : node calculatrice.js abc + 5
+Erreur: Les premier et troisième arguments doivent être des nombres
+```
+
+<details>
+<summary>Solution Exercice 2</summary>
+
+```javascript
+// calculatrice.js
+
+// Récupérer les arguments
+const args = process.argv.slice(2);
+
+// Vérifier qu'on a bien 3 arguments
+if (args.length !== 3) {
+  console.log('Usage: node calculatrice.js <nombre1> <opération> <nombre2>');
+  console.log('Opérations supportées: +, -, *, /');
+  process.exit(1);
+}
+
+const nombre1 = parseFloat(args[0]);
+const operation = args[1];
+const nombre2 = parseFloat(args[2]);
+
+// Vérifier que les nombres sont valides
+if (isNaN(nombre1) || isNaN(nombre2)) {
+  console.log('Erreur: Les premier et troisième arguments doivent être des nombres');
+  process.exit(1);
+}
+
+let resultat;
+
+// Effectuer le calcul selon l'opération
+switch (operation) {
+  case '+':
+    resultat = nombre1 + nombre2;
+    break;
+  case '-':
+    resultat = nombre1 - nombre2;
+    break;
+  case '*':
+    resultat = nombre1 * nombre2;
+    break;
+  case '/':
+    if (nombre2 === 0) {
+      console.log('Erreur: Division par zéro impossible');
+      process.exit(1);
+    }
+    resultat = nombre1 / nombre2;
+    break;
+  default:
+    console.log(`Erreur: Opération "${operation}" non supportée`);
+    console.log('Opérations supportées: +, -, *, /');
+    process.exit(1);
+}
+
+console.log(`${nombre1} ${operation} ${nombre2} = ${resultat}`);
+```
+
+</details>
+
+### Exercice 3 : Utilisation de packages externes - Cowsay
+
+Installez le package `cowsay` et créez un script qui :
+1. Affiche un message amusant avec une vache
+2. Permet de choisir différents animaux (cow, dragon, tux)
+3. Lit le message depuis les arguments en ligne de commande
+
+**Exemples de sortie attendue :**
+
+```bash
+# Exécution : node cowsay-fun.js "Hello World!"
+ _____________
+< Hello World! >
+ -------------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+```
+
+```bash
+# Exécution : node cowsay-fun.js -a dragon "Je suis un dragon!"
+ ____________________
+< Je suis un dragon! >
+ --------------------
+      \                    / \  //\
+       \    |\___/|      /   \//  \\
+            /0  0  \__  /    //  | \ \    
+           /     /  \/_/    //   |  \  \  
+           @_^_@'/   \/_   //    |   \   \ 
+           //_^_/     \/_ //     |    \    \
+        ( //) |        \///      |     \     \
+      ( / /) _|_ /   )  //       |      \     _\
+    ( // /) '/,_ _ _/  ( ; -.    |    _ _\.-~        .-~~~^-.
+  (( / / )) ,-{        _      `-.|.-~-.           .~         `.
+ (( // / ))  '/\      /                 ~-. _ .-~      .-~^-.  \
+ (( /// ))      `.   {            }                   /      \  \
+  (( / ))     .----~-.\        \-'                 .~         \  `. \^-.
+             ///.----..>        \             _ -~             `.  ^-`  ^-_
+               ///-._ _ _ _ _ _ _}^ - - - - ~                     ~-- ,.-~
+                                                                  /.-~
+```
+
+```bash
+# Exécution : node cowsay-fun.js
+ ________________________
+< Salut depuis Node.js ! >
+ ------------------------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+```
+
+<details>
+<summary>Solution Exercice 3</summary>
+
+Premièrement, installez le package :
+```bash
+npm install cowsay
+```
+
+```javascript
+// cowsay-fun.js
+
+const cowsay = require('cowsay');
+
+// Récupérer les arguments
+const args = process.argv.slice(2);
+
+// Message par défaut
+let message = "Salut depuis Node.js !";
+let animal = "cow";
+
+// Parser les arguments
+if (args.length > 0) {
+  // Premier argument = message
+  message = args.join(' ');
+  
+  // Chercher l'option -a ou --animal
+  const animalIndex = args.findIndex(arg => arg === '-a' || arg === '--animal');
+  if (animalIndex !== -1 && args[animalIndex + 1]) {
+    animal = args[animalIndex + 1];
+    // Retirer l'option animal du message
+    message = args.filter((arg, index) => 
+      index !== animalIndex && index !== animalIndex + 1
+    ).join(' ');
+  }
+}
+
+// Animaux disponibles
+const animauxDisponibles = ['cow', 'dragon', 'tux', 'koala', 'moose'];
+
+// Vérifier si l'animal est disponible
+if (!animauxDisponibles.includes(animal)) {
+  console.log(`Animal "${animal}" non disponible.`);
+  console.log(`Animaux disponibles: ${animauxDisponibles.join(', ')}`);
+  animal = 'cow'; // Animal par défaut
+}
+
+// Afficher le message avec cowsay
+try {
+  console.log(cowsay.say({
+    text: message,
+    e: "oo", // yeux
+    T: "U ",  // langue
+    f: animal
+  }));
+} catch (error) {
+  // Si l'animal n'existe pas, utiliser la vache par défaut
+  console.log(cowsay.say({
+    text: message
+  }));
+}
+
+// Usage:
+// node cowsay-fun.js "Hello World!"
+// node cowsay-fun.js -a dragon "Je suis un dragon!"
+```
+
+</details>
+
+### Exercice 4 : Manipulateur de fichiers
+
+Créez un script qui :
+1. Crée un fichier `notes.txt` s'il n'existe pas
+2. Permet d'ajouter une note avec la date/heure actuelle
+3. Permet de lister toutes les notes
+4. Utilise les arguments : `add "ma note"` ou `list`
+
+**Exemples de sortie attendue :**
+
+```bash
+# Exécution : node notes.js
+Usage:
+  node notes.js add "votre note"
+  node notes.js list
+```
+
+```bash
+# Exécution : node notes.js add "Première note de test"
+✅ Note ajoutée avec succès !
+📝 "Première note de test"
+```
+
+```bash
+# Exécution : node notes.js add "Réunion équipe à 14h"
+✅ Note ajoutée avec succès !
+📝 "Réunion équipe à 14h"
+```
+
+```bash
+# Exécution : node notes.js list
+📚 2 note(s) trouvée(s):
+
+1. [24/09/2025 14:30:25] Première note de test
+2. [24/09/2025 14:35:12] Réunion équipe à 14h
+```
+
+```bash
+# Exécution : node notes.js list (quand aucune note)
+📝 Aucune note trouvée. Ajoutez votre première note !
+```
+
+```bash
+# Exécution : node notes.js add
+❌ Erreur: Vous devez spécifier le texte de la note
+Usage: node notes.js add "votre note"
+```
+
+<details>
+<summary>Solution Exercice 4</summary>
+
+```javascript
+// notes.js
+
+const fs = require('fs');
+const path = require('path');
+
+const fichierNotes = path.join(__dirname, 'notes.txt');
+
+// Récupérer les arguments
+const args = process.argv.slice(2);
+
+if (args.length === 0) {
+  console.log('Usage:');
+  console.log('  node notes.js add "votre note"');
+  console.log('  node notes.js list');
+  process.exit(1);
+}
+
+const commande = args[0];
+
+function ajouterNote(texte) {
+  const maintenant = new Date();
+  const horodatage = maintenant.toLocaleString();
+  const note = `[${horodatage}] ${texte}\n`;
+  
+  try {
+    // Ajouter la note au fichier (créer le fichier s'il n'existe pas)
+    fs.appendFileSync(fichierNotes, note, 'utf8');
+    console.log('✅ Note ajoutée avec succès !');
+    console.log(`📝 "${texte}"`);
+  } catch (error) {
+    console.log('❌ Erreur lors de l\'ajout de la note:', error.message);
+  }
+}
+
+function listerNotes() {
+  try {
+    // Vérifier si le fichier existe
+    if (!fs.existsSync(fichierNotes)) {
+      console.log('📝 Aucune note trouvée. Ajoutez votre première note !');
+      return;
+    }
+    
+    // Lire le fichier
+    const contenu = fs.readFileSync(fichierNotes, 'utf8');
+    
+    if (contenu.trim() === '') {
+      console.log('📝 Aucune note dans le fichier.');
+      return;
+    }
+    
+    const notes = contenu.trim().split('\n');
+    console.log(`📚 ${notes.length} note(s) trouvée(s):\n`);
+    
+    notes.forEach((note, index) => {
+      console.log(`${index + 1}. ${note}`);
+    });
+    
+  } catch (error) {
+    console.log('❌ Erreur lors de la lecture des notes:', error.message);
+  }
+}
+
+// Traitement des commandes
+switch (commande.toLowerCase()) {
+  case 'add':
+    if (args.length < 2) {
+      console.log('❌ Erreur: Vous devez spécifier le texte de la note');
+      console.log('Usage: node notes.js add "votre note"');
+      process.exit(1);
+    }
+    const texteNote = args.slice(1).join(' ');
+    ajouterNote(texteNote);
+    break;
+    
+  case 'list':
+    listerNotes();
+    break;
+    
+  default:
+    console.log(`❌ Commande "${commande}" inconnue`);
+    console.log('Commandes disponibles: add, list');
+    process.exit(1);
+}
+```
+
+</details>
+
+### Exercice 5 : Générateur de mots de passe
+
+Créez un générateur de mots de passe qui :
+1. Génère des mots de passe de longueur variable (défaut: 12 caractères)
+2. Permet de choisir les types de caractères (majuscules, minuscules, chiffres, symboles)
+3. Utilise le module `crypto` intégré à Node.js pour plus de sécurité
+4. Peut générer plusieurs mots de passe d'un coup
+
+**Exemples de sortie attendue :**
+
+```bash
+# Exécution : node generateur-mdp.js
+🔐 Génération de 1 mot(s) de passe de 12 caractères
+
+1. aB3$kL9pQ#2x
+   Force: 🟢 Très fort
+
+📊 Configuration:
+   Longueur: 12 caractères
+   Types inclus: Majuscules, Minuscules, Chiffres, Symboles
+```
+
+```bash
+# Exécution : node generateur-mdp.js -l 16 -n 3
+🔐 Génération de 3 mot(s) de passe de 16 caractères
+
+1. mK8$nP2qR@5tV&9w
+   Force: 🟢 Très fort
+
+2. bD7#cF4xS!1uY+8z
+   Force: 🟢 Très fort
+
+3. eG6%hJ3vW*7iA-5o
+   Force: 🟢 Très fort
+
+📊 Configuration:
+   Longueur: 16 caractères
+   Types inclus: Majuscules, Minuscules, Chiffres, Symboles
+```
+
+```bash
+# Exécution : node generateur-mdp.js --no-symbols -l 8
+🔐 Génération de 1 mot(s) de passe de 8 caractères
+
+1. aB3kL9pQ
+   Force: 🟡 Fort
+   Suggestions: Manque de symboles
+
+📊 Configuration:
+   Longueur: 8 caractères
+   Types inclus: Majuscules, Minuscules, Chiffres
+```
+
+```bash
+# Exécution : node generateur-mdp.js --help
+🔐 Générateur de mots de passe sécurisés
+
+Usage: node generateur-mdp.js [options]
+
+Options:
+  -l, --length <n>    Longueur du mot de passe (défaut: 12)
+  -n, --number <n>    Nombre de mots de passe à générer (défaut: 1)
+  --no-upper          Exclure les majuscules
+  --no-lower          Exclure les minuscules
+  --no-digits         Exclure les chiffres
+  --no-symbols        Exclure les symboles
+  -h, --help          Afficher cette aide
+
+Exemples:
+  node generateur-mdp.js
+  node generateur-mdp.js -l 16 -n 5
+  node generateur-mdp.js --no-symbols -l 20
+```
+
+<details>
+<summary>Solution Exercice 5</summary>
+
+```javascript
+// generateur-mdp.js
+
+const crypto = require('crypto');
+
+// Récupérer les arguments
+const args = process.argv.slice(2);
+
+// Configuration par défaut
+let longueur = 12;
+let nombre = 1;
+let inclureMajuscules = true;
+let inclureMinuscules = true;
+let inclureChiffres = true;
+let inclureSymboles = true;
+
+// Jeux de caractères
+const majuscules = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const minuscules = 'abcdefghijklmnopqrstuvwxyz';
+const chiffres = '0123456789';
+const symboles = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+
+// Parser les arguments
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  
+  switch (arg) {
+    case '-l':
+    case '--length':
+      if (i + 1 < args.length) {
+        longueur = parseInt(args[i + 1]);
+        i++; // Skip next argument
+      }
+      break;
+    case '-n':
+    case '--number':
+      if (i + 1 < args.length) {
+        nombre = parseInt(args[i + 1]);
+        i++; // Skip next argument
+      }
+      break;
+    case '--no-upper':
+      inclureMajuscules = false;
+      break;
+    case '--no-lower':
+      inclureMinuscules = false;
+      break;
+    case '--no-digits':
+      inclureChiffres = false;
+      break;
+    case '--no-symbols':
+      inclureSymboles = false;
+      break;
+    case '-h':
+    case '--help':
+      afficherAide();
+      process.exit(0);
+      break;
+  }
+}
+
+function afficherAide() {
+  console.log('🔐 Générateur de mots de passe sécurisés\n');
+  console.log('Usage: node generateur-mdp.js [options]');
+  console.log('\nOptions:');
+  console.log('  -l, --length <n>    Longueur du mot de passe (défaut: 12)');
+  console.log('  -n, --number <n>    Nombre de mots de passe à générer (défaut: 1)');
+  console.log('  --no-upper          Exclure les majuscules');
+  console.log('  --no-lower          Exclure les minuscules');
+  console.log('  --no-digits         Exclure les chiffres');
+  console.log('  --no-symbols        Exclure les symboles');
+  console.log('  -h, --help          Afficher cette aide');
+  console.log('\nExemples:');
+  console.log('  node generateur-mdp.js');
+  console.log('  node generateur-mdp.js -l 16 -n 5');
+  console.log('  node generateur-mdp.js --no-symbols -l 20');
+}
+
+function genererMotDePasse() {
+  // Construire le jeu de caractères
+  let caracteresPossibles = '';
+  
+  if (inclureMajuscules) caracteresPossibles += majuscules;
+  if (inclureMinuscules) caracteresPossibles += minuscules;
+  if (inclureChiffres) caracteresPossibles += chiffres;
+  if (inclureSymboles) caracteresPossibles += symboles;
+  
+  // Vérifier qu'on a au moins un type de caractère
+  if (caracteresPossibles === '') {
+    console.log('❌ Erreur: Aucun type de caractère sélectionné!');
+    process.exit(1);
+  }
+  
+  // Générer le mot de passe
+  let motDePasse = '';
+  
+  for (let i = 0; i < longueur; i++) {
+    // Utiliser crypto pour une génération cryptographiquement sécurisée
+    const indexAleatoire = crypto.randomInt(0, caracteresPossibles.length);
+    motDePasse += caracteresPossibles[indexAleatoire];
+  }
+  
+  return motDePasse;
+}
+
+function evaluerForce(motDePasse) {
+  let score = 0;
+  let commentaires = [];
+  
+  // Longueur
+  if (motDePasse.length >= 12) score += 2;
+  else if (motDePasse.length >= 8) score += 1;
+  else commentaires.push('Trop court (moins de 8 caractères)');
+  
+  // Types de caractères
+  if (/[a-z]/.test(motDePasse)) score += 1;
+  else commentaires.push('Manque de minuscules');
+  
+  if (/[A-Z]/.test(motDePasse)) score += 1;
+  else commentaires.push('Manque de majuscules');
+  
+  if (/[0-9]/.test(motDePasse)) score += 1;
+  else commentaires.push('Manque de chiffres');
+  
+  if (/[^a-zA-Z0-9]/.test(motDePasse)) score += 1;
+  else commentaires.push('Manque de symboles');
+  
+  // Évaluation
+  let force;
+  if (score >= 6) force = '🟢 Très fort';
+  else if (score >= 4) force = '🟡 Fort';
+  else if (score >= 2) force = '🟠 Moyen';
+  else force = '🔴 Faible';
+  
+  return { force, commentaires };
+}
+
+// Validation des paramètres
+if (longueur < 1 || isNaN(longueur)) {
+  console.log('❌ Erreur: La longueur doit être un nombre positif');
+  process.exit(1);
+}
+
+if (nombre < 1 || isNaN(nombre)) {
+  console.log('❌ Erreur: Le nombre doit être un nombre positif');
+  process.exit(1);
+}
+
+// Génération des mots de passe
+console.log(`🔐 Génération de ${nombre} mot(s) de passe de ${longueur} caractères\n`);
+
+for (let i = 0; i < nombre; i++) {
+  const mdp = genererMotDePasse();
+  const evaluation = evaluerForce(mdp);
+  
+  console.log(`${i + 1}. ${mdp}`);
+  console.log(`   Force: ${evaluation.force}`);
+  
+  if (evaluation.commentaires.length > 0) {
+    console.log(`   Suggestions: ${evaluation.commentaires.join(', ')}`);
+  }
+  console.log();
+}
+
+// Afficher la configuration utilisée
+console.log('📊 Configuration:');
+console.log(`   Longueur: ${longueur} caractères`);
+console.log(`   Types inclus: ${[
+  inclureMajuscules && 'Majuscules',
+  inclureMinuscules && 'Minuscules', 
+  inclureChiffres && 'Chiffres',
+  inclureSymboles && 'Symboles'
+].filter(Boolean).join(', ')}`);
+```
+
+</details>
+
+### Exercice 6 : Analyseur de logs
+
+Créez un analyseur de fichiers de logs de serveur HTTP (comme Apache ou Nginx) qui :
+1. Lit un fichier de log ligne par ligne
+2. Extrait les informations importantes (IP, méthode HTTP, code de statut)
+3. Génère des statistiques (nombre de requêtes par IP, codes d'erreur les plus fréquents)
+4. Utilise des expressions régulières pour parser les logs
+
+Les logs sont au format commun (Common Log Format) :
+```
+IP - - [date] "Méthode Ressource Protocole" code_reponse taille
+```
+
+**Exemples de sortie attendue :**
+
+Soit le fichier `server.log` :
+```
+127.0.0.1 - - [23/Sep/2024:10:30:45 +0000] "GET /index.html HTTP/1.1" 200 1234
+192.168.1.100 - - [23/Sep/2024:10:31:12 +0000] "POST /api/users HTTP/1.1" 201 567
+127.0.0.1 - - [23/Sep/2024:10:32:01 +0000] "GET /style.css HTTP/1.1" 200 890
+10.0.0.50 - - [23/Sep/2024:10:32:30 +0000] "GET /missing.html HTTP/1.1" 404 123
+192.168.1.100 - - [23/Sep/2024:10:33:15 +0000] "DELETE /api/users/123 HTTP/1.1" 204 0
+127.0.0.1 - - [23/Sep/2024:10:34:22 +0000] "GET /app.js HTTP/1.1" 500 234
+```
+
+Exécution : `node analyseur-logs.js server.log`
+
+```bash
+🔍 Analyse du fichier: server.log
+
+==================================================
+📈 RAPPORT D'ANALYSE DES LOGS
+==================================================
+
+📋 Résumé général:
+  Total de lignes: 6
+  Lignes valides: 6
+  Lignes avec erreurs: 0
+
+📊 Top des adresses IP:
+  1. 127.0.0.1: 3 requêtes
+  2. 192.168.1.100: 2 requêtes
+  3. 10.0.0.50: 1 requêtes
+
+🌐 Répartition des méthodes HTTP:
+  GET: 4 requêtes
+  POST: 1 requêtes
+  DELETE: 1 requêtes
+
+📊 Codes de statut par catégorie:
+  Succès: 4 requêtes
+  Erreur client: 1 requêtes
+  Erreur serveur: 1 requêtes
+
+🔢 Détail des codes de statut:
+  200: 3 requêtes
+  201: 1 requêtes
+  204: 1 requêtes
+  404: 1 requêtes
+  500: 1 requêtes
+
+📊 Top des URLs les plus visitées:
+  1. /index.html: 1 requêtes
+  2. /style.css: 1 requêtes
+  3. /missing.html: 1 requêtes
+  4. /api/users: 1 requêtes
+  5. /api/users/123: 1 requêtes
+
+🚨 Alertes:
+  ⚠️  1 erreurs client (4xx) détectées
+  🚨 1 erreurs serveur (5xx) détectées
+```
+
+Exécution de `node analyseur-logs.js fichier_inexistant.log` :
+
+```bash
+🔍 Analyse du fichier: fichier_inexistant.log
+
+❌ Erreur: Le fichier "fichier_inexistant.log" n'existe pas
+```
+
+Exécution de `node analyseur-logs.js logs_vides.log` :
+
+```bash
+🔍 Analyse du fichier: logs_vides.log
+
+==================================================
+📈 RAPPORT D'ANALYSE DES LOGS
+==================================================
+
+📋 Résumé général:
+  Total de lignes: 0
+  Lignes valides: 0
+  Lignes avec erreurs: 0
+
+📊 Top des adresses IP:
+  Aucune donnée
+
+🌐 Répartition des méthodes HTTP:
+
+📊 Codes de statut par catégorie:
+
+🔢 Détail des codes de statut:
+
+📊 Top des URLs les plus visitées:
+  Aucune donnée
+
+🚨 Alertes:
+  ✅ Aucune erreur majeure détectée
+```
+
+<details>
+<summary>Solution Exercice 6</summary>
+
+```javascript
+// analyseur-logs.js
+
+const fs = require('fs');
+const path = require('path');
+
+// Récupérer le fichier de log depuis les arguments
+const args = process.argv.slice(2);
+const fichierLog = args[0] || 'server.log';
+
+// Expression régulière pour parser les logs au format Common Log Format
+const regexLog = /^(\S+) \S+ \S+ \[([^\]]+)\] "(\S+) (\S+) (\S+)" (\d+) (\d+)$/;
+
+// Structures pour stocker les statistiques
+const stats = {
+  totalLignes: 0,
+  lignesValides: 0,
+  ips: {},
+  methodes: {},
+  codesStatut: {},
+  urls: {},
+  erreurs: []
+};
+
+function analyserLigne(ligne, numeroLigne) {
+  const match = ligne.match(regexLog);
+  
+  if (!match) {
+    stats.erreurs.push(`Ligne ${numeroLigne}: Format invalide`);
+    return null;
+  }
+  
+  const [, ip, timestamp, methode, url, protocol, codeStatut, taille] = match;
+  
+  return {
+    ip,
+    timestamp: new Date(timestamp.replace('/', ' ').replace('/', ' ')),
+    methode,
+    url,
+    protocol,
+    codeStatut: parseInt(codeStatut),
+    taille: parseInt(taille)
+  };
+}
+
+function mettreAJourStats(entree) {
+  if (!entree) return;
+  
+  stats.lignesValides++;
+  
+  // Comptage par IP
+  stats.ips[entree.ip] = (stats.ips[entree.ip] || 0) + 1;
+  
+  // Comptage par méthode HTTP
+  stats.methodes[entree.methode] = (stats.methodes[entree.methode] || 0) + 1;
+  
+  // Comptage par code de statut
+  stats.codesStatut[entree.codeStatut] = (stats.codesStatut[entree.codeStatut] || 0) + 1;
+  
+  // Comptage par URL
+  stats.urls[entree.url] = (stats.urls[entree.url] || 0) + 1;
+}
+
+function trierParValeur(obj) {
+  return Object.entries(obj)
+    .sort(([,a], [,b]) => b - a)
+    .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
+}
+
+function afficherTop(titre, donnees, limite = 5) {
+  console.log(`\n📊 ${titre}:`);
+  const trie = trierParValeur(donnees);
+  const entrees = Object.entries(trie).slice(0, limite);
+  
+  if (entrees.length === 0) {
+    console.log('  Aucune donnée');
+    return;
+  }
+  
+  entrees.forEach(([cle, valeur], index) => {
+    console.log(`  ${index + 1}. ${cle}: ${valeur} requêtes`);
+  });
+}
+
+function categoriserCodeStatut(code) {
+  if (code >= 200 && code < 300) return 'Succès';
+  if (code >= 300 && code < 400) return 'Redirection';
+  if (code >= 400 && code < 500) return 'Erreur client';
+  if (code >= 500) return 'Erreur serveur';
+  return 'Autre';
+}
+
+async function analyserFichier() {
+  try {
+    console.log(`🔍 Analyse du fichier: ${fichierLog}\n`);
+    
+    // Vérifier si le fichier existe
+    if (!fs.existsSync(fichierLog)) {
+      console.log(`❌ Erreur: Le fichier "${fichierLog}" n'existe pas`);
+      process.exit(1);
+    }
+    
+    // Lire le fichier ligne par ligne
+    const contenu = fs.readFileSync(fichierLog, 'utf8');
+    const lignes = contenu.split('\n').filter(ligne => ligne.trim() !== '');
+    
+    stats.totalLignes = lignes.length;
+    
+    // Traiter chaque ligne
+    lignes.forEach((ligne, index) => {
+      const entree = analyserLigne(ligne, index + 1);
+      mettreAJourStats(entree);
+    });
+    
+    // Afficher les résultats
+    console.log('='.repeat(50));
+    console.log('📈 RAPPORT D\'ANALYSE DES LOGS');
+    console.log('='.repeat(50));
+    
+    console.log(`\n📋 Résumé général:`);
+    console.log(`  Total de lignes: ${stats.totalLignes}`);
+    console.log(`  Lignes valides: ${stats.lignesValides}`);
+    console.log(`  Lignes avec erreurs: ${stats.totalLignes - stats.lignesValides}`);
+    
+    if (stats.erreurs.length > 0) {
+      console.log(`\n❌ Erreurs de parsing:`);
+      stats.erreurs.forEach(erreur => console.log(`  ${erreur}`));
+    }
+    
+    // Top des IPs
+    afficherTop('Top des adresses IP', stats.ips);
+    
+    // Méthodes HTTP
+    console.log(`\n🌐 Répartition des méthodes HTTP:`);
+    Object.entries(stats.methodes).forEach(([methode, count]) => {
+      console.log(`  ${methode}: ${count} requêtes`);
+    });
+    
+    // Codes de statut par catégorie
+    console.log(`\n📊 Codes de statut par catégorie:`);
+    const categories = {};
+    Object.entries(stats.codesStatut).forEach(([code, count]) => {
+      const categorie = categoriserCodeStatut(parseInt(code));
+      categories[categorie] = (categories[categorie] || 0) + count;
+    });
+    
+    Object.entries(categories).forEach(([categorie, count]) => {
+      console.log(`  ${categorie}: ${count} requêtes`);
+    });
+    
+    // Détail des codes de statut
+    console.log(`\n🔢 Détail des codes de statut:`);
+    const codesTriés = trierParValeur(stats.codesStatut);
+    Object.entries(codesTriés).forEach(([code, count]) => {
+      console.log(`  ${code}: ${count} requêtes`);
+    });
+    
+    // Top des URLs
+    afficherTop('Top des URLs les plus visitées', stats.urls);
+    
+    // Détection des problèmes
+    console.log(`\n🚨 Alertes:`);
+    const erreurs4xx = Object.entries(stats.codesStatut)
+      .filter(([code]) => code >= 400 && code < 500)
+      .reduce((total, [, count]) => total + count, 0);
+      
+    const erreurs5xx = Object.entries(stats.codesStatut)
+      .filter(([code]) => code >= 500)
+      .reduce((total, [, count]) => total + count, 0);
+    
+    if (erreurs4xx > 0) {
+      console.log(`  ⚠️  ${erreurs4xx} erreurs client (4xx) détectées`);
+    }
+    
+    if (erreurs5xx > 0) {
+      console.log(`  🚨 ${erreurs5xx} erreurs serveur (5xx) détectées`);
+    }
+    
+    if (erreurs4xx === 0 && erreurs5xx === 0) {
+      console.log(`  ✅ Aucune erreur majeure détectée`);
+    }
+    
+  } catch (error) {
+    console.log(`❌ Erreur lors de l'analyse: ${error.message}`);
+  }
+}
+
+// Lancer l'analyse
+analyserFichier();
+```
+
+</details>
+
 ## Conclusion
 
 Node.js est un outil puissant pour développer des applications JavaScript côté serveur. Ce tutoriel vous a fourni les bases pour commencer à utiliser Node.js, mais il existe bien d'autres fonctionnalités à explorer comme :
