@@ -42,28 +42,64 @@ function getLanguageFromExtension(filePath) {
 
 // Fonction pour remplacer les inclusions de code dans le markdown
 function replaceCodeInclusions(markdownContent, codeBasePath) {
-  // Pattern pour trouver les inclusions de code: <!-- @include: path/to/file -->
-  const includePattern = /<!--\s*@include:\s*([^>]+?)\s*-->/g;
+  // Pattern 1: Anciennes inclusions simples <!-- @include: path -->
+  // Ignore les inclusions @include:start/@include:end qui doivent être traitées par le pattern 2
+  const simpleIncludePattern = /<!--\s*@include:\s*(?!start\s|end\s)([^>]+?)\s*-->/g;
   
-  return markdownContent.replace(includePattern, (match, relativePath) => {
+  // Pattern 2: Nouvelles inclusions avec balises de début/fin
+  // Format: <!-- @include:start path --> ... <!-- @include:end path -->
+  const blockIncludePattern = /<!--\s*@include:start\s+([^\s>]+)\s*-->([\s\S]*?)<!--\s*@include:end\s+\1\s*-->/g;
+  
+  let result = markdownContent;
+  
+  // Traiter d'abord les inclusions avec balises (plus spécifiques)
+  let blockMatches = 0;
+  result = result.replace(blockIncludePattern, (match, relativePath, existingContent) => {
     const trimmedPath = relativePath.trim();
     const fullPath = path.join(codeBasePath, trimmedPath);
+    blockMatches++;
     
-    console.log(`  Inclusion trouvée: ${trimmedPath}`);
+    console.log(`  Inclusion avec balises #${blockMatches} trouvée: "${trimmedPath}"`);
     console.log(`  Chemin complet: ${fullPath}`);
     
     const fileContent = readFile(fullPath);
     if (!fileContent) {
       console.error(`  ❌ Impossible de lire le fichier: ${fullPath}`);
-      return `<!-- ERREUR: Impossible de lire ${trimmedPath} -->`;
+      return `<!-- @include:start ${trimmedPath} -->\n<!-- ERREUR: Impossible de lire ${trimmedPath} -->\n<!-- @include:end ${trimmedPath} -->`;
     }
     
     const language = getLanguageFromExtension(fullPath);
     console.log(`  ✅ Fichier inclus avec le langage: ${language}`);
     
-    // Retourner le bloc de code avec la coloration syntaxique appropriée
-    return `\`\`\`${language}\n${fileContent}\n\`\`\``;
+    // Retourner avec les balises préservées
+    return `<!-- @include:start ${trimmedPath} -->\n\`\`\`${language}\n${fileContent}\n\`\`\`\n<!-- @include:end ${trimmedPath} -->`;
   });
+  
+  // Traiter ensuite les inclusions simples (les convertir en format avec balises)
+  let simpleMatches = 0;
+  result = result.replace(simpleIncludePattern, (match, relativePath) => {
+    const trimmedPath = relativePath.trim();
+    const fullPath = path.join(codeBasePath, trimmedPath);
+    simpleMatches++;
+    
+    console.log(`  Inclusion simple #${simpleMatches} trouvée (conversion): "${trimmedPath}"`);
+    console.log(`  Chemin complet: ${fullPath}`);
+    
+    const fileContent = readFile(fullPath);
+    if (!fileContent) {
+      console.error(`  ❌ Impossible de lire le fichier: ${fullPath}`);
+      return `<!-- @include:start ${trimmedPath} -->\n<!-- ERREUR: Impossible de lire ${trimmedPath} -->\n<!-- @include:end ${trimmedPath} -->`;
+    }
+    
+    const language = getLanguageFromExtension(fullPath);
+    console.log(`  ✅ Fichier inclus avec le langage: ${language} (converti en format avec balises)`);
+    
+    // Convertir en format avec balises
+    return `<!-- @include:start ${trimmedPath} -->\n\`\`\`${language}\n${fileContent}\n\`\`\`\n<!-- @include:end ${trimmedPath} -->`;
+  });
+  
+  console.log(`  Résumé: ${blockMatches} inclusions avec balises, ${simpleMatches} inclusions simples traitées`);
+  return result;
 }
 
 // Fonction pour traiter un fichier markdown
@@ -98,7 +134,7 @@ function processMarkdownFile(markdownPath) {
   }
   
   // Vérifier s'il y a des inclusions à traiter
-  if (!content.includes('@include:')) {
+  if (!content.includes('@include:') && !content.includes('@include ')) {
     console.log(`  Aucune inclusion trouvée dans ${fileName}.md`);
     return false;
   }

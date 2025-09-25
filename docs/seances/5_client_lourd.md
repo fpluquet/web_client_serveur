@@ -22,6 +22,7 @@ L'index.html contiendra la structure de base de notre application, avec une barr
 Le fichier `app.js` gérera la navigation entre les différentes vues et les interactions utilisateur, en remplaçant le contenu du conteneur principal par le contenu approprié sans recharger la page.
 
 ::: details Le fichier index.html
+<!-- @include:start spa-basique/index.html -->
 ```html
 <!DOCTYPE html>
 <html lang="fr">
@@ -46,9 +47,11 @@ Le fichier `app.js` gérera la navigation entre les différentes vues et les int
 </body>
 </html>
 ```
+<!-- @include:end spa-basique/index.html -->
 :::
 
 ::: details Le fichier app.js
+<!-- @include:start spa-basique/js/app.js -->
 ```javascript
 // app.js
 document.addEventListener('DOMContentLoaded', () => {
@@ -202,9 +205,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 ```
+<!-- @include:end spa-basique/js/app.js -->
 :::
 
 ::: details Le fichier style.css
+<!-- @include:start spa-basique/css/style.css -->
 ```css
 /* Styles pour SPA Basique */
 * {
@@ -317,6 +322,7 @@ button:hover {
   color: #dc3545;
 }
 ```
+<!-- @include:end spa-basique/css/style.css -->
 :::
 
 ### Test de l'application SPA
@@ -370,6 +376,7 @@ todolist-client-lourd/
 Créons d'abord notre serveur Express qui fournira une API REST simple :
 
 ::: details server/server.js
+<!-- @include:start todolist-client-lourd/server/server.js -->
 ```javascript
 // server/server.js
 import express from 'express';
@@ -381,7 +388,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = 3001;
 
 // Middleware
 app.use(cors());
@@ -461,9 +468,11 @@ app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
 ```
+<!-- @include:end todolist-client-lourd/server/server.js -->
 :::
 
 ::: details server/package.json
+<!-- @include:start todolist-client-lourd/server/package.json -->
 ```json
 {
   "name": "todolist-api",
@@ -484,6 +493,7 @@ app.listen(PORT, () => {
   }
 }
 ```
+<!-- @include:end todolist-client-lourd/server/package.json -->
 :::
 
 ### Côté client (Application JavaScript)
@@ -491,6 +501,7 @@ app.listen(PORT, () => {
 Maintenant, créons le client lourd qui va consommer notre API :
 
 ::: details client/index.html
+<!-- @include:start todolist-client-lourd/client/index.html -->
 ```html
 <!DOCTYPE html>
 <html lang="fr">
@@ -539,14 +550,16 @@ Maintenant, créons le client lourd qui va consommer notre API :
 </body>
 </html>
 ```
+<!-- @include:end todolist-client-lourd/client/index.html -->
 :::
 
 ::: details client/js/app.js
+<!-- @include:start todolist-client-lourd/client/js/app.js -->
 ```javascript
 // client/js/app.js
 class TodoApp {
   constructor() {
-    this.apiUrl = 'http://localhost:3000/api';
+    this.apiUrl = 'http://localhost:3001/api';
     this.todos = [];
     
     this.init();
@@ -725,9 +738,11 @@ class TodoApp {
 // Initialiser l'application
 const app = new TodoApp();
 ```
+<!-- @include:end todolist-client-lourd/client/js/app.js -->
 :::
 
 ::: details client/css/style.css
+<!-- @include:start todolist-client-lourd/client/css/style.css -->
 ```css
 /* client/css/style.css */
 * {
@@ -962,6 +977,7 @@ button[type="submit"]:hover {
   }
 }
 ```
+<!-- @include:end todolist-client-lourd/client/css/style.css -->
 :::
 
 ### Instructions de démarrage
