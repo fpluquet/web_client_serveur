@@ -1128,7 +1128,242 @@ Cette approche modulaire avec des routers permet de :
 - **Maintenir** facilement l'application
 - **Collaborer** efficacement en équipe (chaque développeur peut travailler sur un router différent)
 
-## 9. Exercices pratiques
+## 9. Types de réponses : Texte et JSON
+
+Dans nos exemples précédents, nous avons utilisé principalement `res.send()` pour envoyer des réponses HTML ou texte. Express.js offre plusieurs méthodes pour envoyer différents types de contenu au client. Comprendre ces différences est crucial pour créer des applications web modernes qui peuvent servir à la fois des pages web et des APIs.
+
+### 9.1 Réponses texte avec `res.send()`
+
+La méthode `res.send()` est la méthode la plus générale pour envoyer une réponse. Elle peut gérer automatiquement différents types de contenu et définit les en-têtes HTTP appropriés.
+
+```javascript
+import express from 'express';
+const app = express();
+
+// Envoie du texte simple
+app.get('/text', (req, res) => {
+  res.send('Ceci est une réponse texte simple');
+});
+
+// Envoie du HTML
+app.get('/html', (req, res) => {
+  res.send('<h1>Titre</h1><p>Ceci est du HTML</p>');
+});
+
+// Envoie un nombre (sera converti en string)
+app.get('/number', (req, res) => {
+  res.send('42');
+});
+
+// Définir manuellement le Content-Type
+app.get('/custom-text', (req, res) => {
+  res.set('Content-Type', 'text/plain; charset=utf-8');
+  res.send('Texte avec encodage UTF-8 spécifié');
+});
+```
+
+**Caractéristiques de `res.send()` :**
+- **Automatique** : Définit automatiquement le `Content-Type` selon le contenu
+- **Flexible** : Accepte strings, objects, arrays, buffers
+- **Finalisante** : Termine la réponse HTTP (pas besoin d'appeler autre chose après)
+
+### 9.2 Réponses JSON avec `res.json()`
+
+Pour les APIs modernes, JSON est le format d'échange de données standard. Express fournit `res.json()` pour envoyer facilement des données structurées.
+
+```javascript
+// Réponse JSON simple
+app.get('/api/user', (req, res) => {
+  const user = {
+    id: 1,
+    name: 'Alice Dupont',
+    email: 'alice@exemple.com',
+    active: true
+  };
+  
+  res.json(user);
+});
+
+// Réponse JSON avec structure d'API typique
+app.get('/api/products', (req, res) => {
+  const products = [
+    { id: 1, name: 'Laptop', price: 999.99 },
+    { id: 2, name: 'Souris', price: 29.99 }
+  ];
+  
+  res.json({
+    success: true,
+    message: 'Produits récupérés avec succès',
+    data: products,
+    total: products.length
+  });
+});
+
+// Gestion d'erreur en JSON
+app.get('/api/user/:id', (req, res) => {
+  const userId = parseInt(req.params.id);
+  
+  if (isNaN(userId) || userId < 1) {
+    return res.status(400).json({
+      success: false,
+      message: 'ID utilisateur invalide',
+      error: 'L\'ID doit être un nombre positif'
+    });
+  }
+  
+  // Simulation : utilisateur non trouvé
+  if (userId > 100) {
+    return res.status(404).json({
+      success: false,
+      message: 'Utilisateur non trouvé',
+      error: `Aucun utilisateur avec l'ID ${userId}`
+    });
+  }
+  
+  res.json({
+    success: true,
+    data: {
+      id: userId,
+      name: `Utilisateur ${userId}`,
+      email: `user${userId}@exemple.com`
+    }
+  });
+});
+```
+
+**Avantages de `res.json()` :**
+- **Automatique** : Définit `Content-Type: application/json`
+- **Sérialisation** : Convertit automatiquement les objets JavaScript en JSON
+- **Cohérent** : Format standardisé pour les APIs REST
+
+### 9.3 Comparaison pratique
+
+Voici un exemple qui montre la différence entre les deux approches pour le même contenu :
+
+```javascript
+app.get('/comparison/text', (req, res) => {
+  // Réponse texte - difficile à traiter côté client
+  res.send('Nom: Alice, Age: 25, Email: alice@test.com');
+});
+
+app.get('/comparison/json', (req, res) => {
+  // Réponse JSON - facilement utilisable côté client
+  res.json({
+    name: 'Alice',
+    age: 25,
+    email: 'alice@test.com'
+  });
+});
+```
+
+**Côté client JavaScript, la différence est importante :**
+
+```javascript
+// Avec la réponse texte, le client doit parser manuellement
+fetch('/comparison/text')
+  .then(response => response.text())
+  .then(text => {
+    // Parsing manuel complexe et fragile
+    console.log(text); // "Nom: Alice, Age: 25, Email: alice@test.com"
+  });
+
+// Avec la réponse JSON, le client peut utiliser directement
+fetch('/comparison/json')
+  .then(response => response.json())
+  .then(data => {
+    // Objet JavaScript prêt à utiliser
+    console.log(data.name); // "Alice"
+    console.log(data.age);  // 25
+  });
+```
+
+### 9.4 Bonnes pratiques pour le choix du format
+
+**Utilisez `res.send()` pour :**
+- Pages web complètes (HTML)
+- Messages d'erreur simples pour debugging
+- Contenu textuel brut (logs, configuration)
+- Applications web traditionnelles (non-API)
+
+**Utilisez `res.json()` pour :**
+- APIs REST modernes
+- Communication avec des applications frontend (React, Vue, Angular)
+- Échange de données structurées
+- Réponses qui seront traitées par JavaScript
+
+### 9.5 Exemple d'application hybride
+
+Voici une application qui sert à la fois des pages web et une API :
+
+```javascript
+import express from 'express';
+const app = express();
+
+app.use(express.json());
+
+// Simulation d'une base de données
+let tasks = [
+  { id: 1, title: 'Apprendre Express', completed: false },
+  { id: 2, title: 'Créer une API', completed: true }
+];
+
+// Routes HTML (pour navigateur)
+app.get('/', (req, res) => {
+  let html = '<h1>Gestionnaire de tâches</h1><ul>';
+  tasks.forEach(task => {
+    const status = task.completed ? '✓' : '○';
+    html += `<li>${status} ${task.title}</li>`;
+  });
+  html += '</ul><p><a href="/api/tasks">Voir l\'API JSON</a></p>';
+  res.send(html);
+});
+
+// Routes API (pour applications JavaScript)
+app.get('/api/tasks', (req, res) => {
+  res.json({
+    success: true,
+    data: tasks,
+    total: tasks.length
+  });
+});
+
+app.post('/api/tasks', (req, res) => {
+  const { title } = req.body;
+  
+  if (!title) {
+    return res.status(400).json({
+      success: false,
+      message: 'Le titre est requis'
+    });
+  }
+  
+  const newTask = {
+    id: tasks.length + 1,
+    title: title,
+    completed: false
+  };
+  
+  tasks.push(newTask);
+  
+  res.status(201).json({
+    success: true,
+    message: 'Tâche créée',
+    data: newTask
+  });
+});
+
+app.listen(3000, () => {
+  console.log('Serveur hybride sur http://localhost:3000');
+  console.log('Interface web : http://localhost:3000/');
+  console.log('API JSON : http://localhost:3000/api/tasks');
+});
+```
+
+Cette approche permet à votre serveur de servir à la fois :
+- **Des humains** qui utilisent un navigateur (réponses HTML)
+- **Des applications** qui consomment votre API (réponses JSON)
+
+## 10. Exercices pratiques
 
 ### Exercice 1 : Premier serveur Express
 
@@ -1686,4 +1921,3 @@ app.listen(3000, () => {
 ```
 
 </details>
-
