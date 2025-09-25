@@ -29,7 +29,7 @@ DELETE supprime une ressource existante. Elle est idempotente : supprimer une re
 La gestion appropriée des paramètres d'entrée est cruciale pour la sécurité et la robustesse de l'application. En Express, nous avons plusieurs moyens de récupérer des données :
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const app = express();
 
 // Middleware pour parser le JSON
@@ -102,8 +102,8 @@ npm install sqlite3
 **Exemple d'utilisation basique :**
 
 ```javascript
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+import sqlite3 from 'sqlite3';
+import path from 'path';
 
 // Connexion à la base de données
 const dbPath = path.join(__dirname, 'database.db');
@@ -220,7 +220,7 @@ npm install mariadb
 **Configuration de la connexion :**
 
 ```javascript
-const mariadb = require('mariadb');
+import mariadb from 'mariadb';
 
 // Configuration du pool de connexions
 const pool = mariadb.createPool({
@@ -350,7 +350,7 @@ npm install --save-dev sequelize-cli
 **Configuration de base :**
 
 ```javascript
-const { Sequelize, DataTypes } = require('sequelize');
+import { Sequelize, DataTypes } from 'sequelize';
 
 // Configuration pour SQLite (développement)
 const sequelizeSQLite = new Sequelize({
@@ -611,8 +611,8 @@ src/
 
 ```javascript
 // controllers/userController.js
-const UserService = require('../services/userService');
-const { validationResult } = require('express-validator');
+import UserService from '../services/userService.js';
+import { validationResult } from 'express-validator';
 
 class UserController {
     static async createUser(req, res, next) {
@@ -748,9 +748,9 @@ module.exports = UserController;
 
 ```javascript
 // routes/users.js
-const express = require('express');
-const { body, param, query } = require('express-validator');
-const UserController = require('../controllers/userController');
+import express from 'express';
+import { body, param, query } from 'express-validator';
+import UserController from '../controllers/userController.js';
 
 const router = express.Router();
 
@@ -878,15 +878,15 @@ module.exports = { errorHandler, notFound };
 
 ```javascript
 // app.js
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 
-const { sequelize } = require('./models');
-const userRoutes = require('./routes/users');
-const { errorHandler, notFound } = require('./middleware/errorHandler');
+import { sequelize } from './models/index.js';
+import userRoutes from './routes/users.js';
+import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
 
@@ -988,7 +988,7 @@ Les migrations sont des scripts qui permettent de modifier la structure de la ba
 
 ```javascript
 // .sequelizerc
-const path = require('path');
+import path from 'path';
 
 module.exports = {
     'config': path.resolve('config', 'database.js'),
@@ -1121,9 +1121,9 @@ module.exports = {
 
 ```javascript
 // __tests__/users.test.js
-const request = require('supertest');
-const app = require('../src/app');
-const { sequelize } = require('../src/models');
+import request from 'supertest';
+import app from '../src/app.js';
+import { sequelize } from '../src/models/index.js';
 
 describe('Users API', () => {
     beforeAll(async () => {
@@ -1233,3 +1233,11 @@ describe('Users API', () => {
 ```
 
 Ce chapitre complet fournit maintenant une base solide pour comprendre et implémenter la gestion des données dans des applications Node.js/Express modernes, avec des exemples concrets couvrant SQLite, MariaDB, et l'utilisation d'ORM comme Sequelize.
+
+
+
+
+
+
+
+

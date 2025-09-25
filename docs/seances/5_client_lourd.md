@@ -214,9 +214,13 @@ Créons d'abord notre serveur Express qui fournira une API REST simple :
 
 ```javascript
 // server/server.js
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;

@@ -70,7 +70,7 @@ Node.js permet de créer facilement un serveur HTTP basique. Commençons par un 
 
 ```javascript
 // Importer le module HTTP
-const http = require('http');
+import http from 'http';
 
 // Créer un serveur HTTP
 const server = http.createServer((req, res) => {
@@ -156,8 +156,8 @@ graph TB
 Bien que le module HTTP natif de Node.js soit fonctionnel, il présente des limitations importantes quand on souhaite créer des applications web plus complexes. Voici un exemple qui illustre ces difficultés :
 
 ```javascript
-const http = require('http');
-const url = require('url');
+import http from 'http';
+import url from 'url';
 
 const server = http.createServer((req, res) => {
   // Parser l'URL et la méthode HTTP
@@ -244,7 +244,7 @@ Voici le même serveur que précédemment, mais réécrit avec Express.js :
 
 ```javascript
 // Importer Express
-const express = require('express');
+import express from 'express';
 
 // Créer une application Express
 const app = express();
@@ -477,7 +477,7 @@ function monMiddleware(req, res, next) {
 Ces middlewares s'exécutent pour **toutes** les requêtes de l'application.
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const app = express();
 
 // Middleware de logging pour toutes les requêtes
@@ -579,7 +579,7 @@ app.use(express.urlencoded({ extended: true }));
 ### 7.4 Exemple complet avec middlewares
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const app = express();
 
 // 1. Middleware de logging (pour toutes les requêtes)
@@ -684,7 +684,7 @@ Un router Express est comme une "mini-application" qui peut avoir ses propres mi
 
 ```javascript
 // app.js - Tout dans un seul fichier (difficile à maintenir)
-const express = require('express');
+import express from 'express';
 const app = express();
 
 // Routes utilisateurs
@@ -711,10 +711,10 @@ app.listen(3000);
 
 ```javascript
 // app.js - Application principale propre
-const express = require('express');
-const userRoutes = require('./routes/users');
-const productRoutes = require('./routes/products');
-const orderRoutes = require('./routes/orders');
+import express from 'express';
+import userRoutes from './routes/users.js';
+import productRoutes from './routes/products.js';
+import orderRoutes from './routes/orders.js';
 
 const app = express();
 
@@ -733,7 +733,7 @@ app.listen(3000);
 **Fichier : `routes/users.js`**
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Simuler une base de données d'utilisateurs
@@ -833,8 +833,8 @@ module.exports = router;
 **Fichier : `app.js`**
 
 ```javascript
-const express = require('express');
-const userRoutes = require('./routes/users');
+import express from 'express';
+import userRoutes from './routes/users.js';
 
 const app = express();
 
@@ -870,7 +870,7 @@ Les routers peuvent avoir leurs propres middlewares qui ne s'appliquent qu'aux r
 **Fichier : `routes/admin.js`**
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Middleware spécifique au router admin
@@ -926,7 +926,7 @@ Vous pouvez créer des structures de routes complexes avec des routers imbriqué
 **Fichier : `routes/blog.js`**
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Simuler des données de blog
@@ -1018,10 +1018,10 @@ project/
 **Fichier : `app.js`**
 
 ```javascript
-const express = require('express');
-const userRoutes = require('./routes/users');
-const adminRoutes = require('./routes/admin');
-const blogRoutes = require('./routes/blog');
+import express from 'express';
+import userRoutes from './routes/users.js';
+import adminRoutes from './routes/admin.js';
+import blogRoutes from './routes/blog.js';
 
 const app = express();
 
@@ -1153,7 +1153,7 @@ Cette approche modulaire avec des routers permet de :
 <summary>🔍 Solution Exercice 1</summary>
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const app = express();
 
 // Routes principales
@@ -1204,7 +1204,7 @@ Créez un serveur avec les routes suivantes :
 <summary>🔍 Solution Exercice 2</summary>
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const app = express();
 
 app.get('/users/:id', (req, res) => {
@@ -1251,7 +1251,7 @@ app.listen(3000, () => {
 <summary>🔍 Solution Exercice 3</summary>
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const app = express();
 
 // Middleware de logging
@@ -1303,7 +1303,7 @@ app.listen(3000, () => {
 <summary>🔍 Solution Exercice 4</summary>
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const app = express();
 
 // Middleware d'authentification
@@ -1361,7 +1361,7 @@ app.listen(3000, () => {
 <summary>🔍 Solution Exercice 5</summary>
 
 ```javascript
-const express = require('express');
+import express from 'express';
 const app = express();
 
 // Middleware pour parser JSON
@@ -1455,7 +1455,7 @@ projet/
 
 **Fichier : `routes/products.js`**
 ```javascript
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Base de données simulée
@@ -1511,8 +1511,8 @@ module.exports = router;
 
 **Fichier : `app.js`**
 ```javascript
-const express = require('express');
-const productRoutes = require('./routes/products');
+import express from 'express';
+import productRoutes from './routes/products.js';
 
 const app = express();
 
@@ -1568,7 +1568,7 @@ app.listen(3000, () => {
 
 **Fichier : `routes/tasks.js`**
 ```javascript
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Base de données simulée
@@ -1643,8 +1643,8 @@ module.exports = router;
 
 **Fichier : `app.js`**
 ```javascript
-const express = require('express');
-const taskRoutes = require('./routes/tasks');
+import express from 'express';
+import taskRoutes from './routes/tasks.js';
 
 const app = express();
 

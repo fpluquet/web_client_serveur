@@ -2340,7 +2340,7 @@ function trackNotificationEvent(eventType, data) {
 
 ```javascript
 // Exemple d'implémentation côté serveur (Node.js avec web-push)
-const webpush = require('web-push');
+import webpush from 'web-push';
 
 // Configuration VAPID
 webpush.setVapidDetails(
@@ -2415,7 +2415,7 @@ class PushNotificationService {
 }
 
 // API endpoints Express
-const express = require('express');
+import express from 'express';
 const app = express();
 const pushService = new PushNotificationService();
 
@@ -2880,8 +2880,8 @@ La compression des ressources est essentielle pour réduire la taille des fichie
 ```javascript
 // Configuration pour la compression des ressources
 // Dans votre serveur Express
-const compression = require('compression');
-const express = require('express');
+import compression from 'compression';
+import express from 'express';
 const app = express();
 
 // Active la compression gzip
@@ -3927,8 +3927,8 @@ lighthouse https://votre-pwa.com --preset=perf --chrome-flags="--headless"
 
 ```javascript
 // Intégration Lighthouse dans un script Node.js
-const lighthouse = require('lighthouse');
-const chromeLauncher = require('chrome-launcher');
+import lighthouse from 'lighthouse';
+import chromeLauncher from 'chrome-launcher';
 
 async function runLighthouseAudit(url) {
     // Lance Chrome en mode headless
@@ -3958,7 +3958,7 @@ async function runLighthouseAudit(url) {
     console.log('Score Accessibilité:', lhr.categories.accessibility.score * 100);
 
     // Sauvegarde du rapport
-    const fs = require('fs');
+    import fs from 'fs';
     fs.writeFileSync('lighthouse-report.html', report);
     
     return lhr;
@@ -4024,7 +4024,7 @@ npm install workbox-cli --global
 
 ```javascript
 // webpack.config.js
-const { GenerateSW } = require('workbox-webpack-plugin');
+import { GenerateSW } from 'workbox-webpack-plugin';
 
 module.exports = {
     // ... autres configurations webpack
@@ -4355,7 +4355,7 @@ vue add pwa
 npm install next-pwa
 
 # Configuration dans next.config.js
-const withPWA = require('next-pwa')({
+import withPWA from 'next-pwa';
     dest: 'public',
     register: true,
     skipWaiting: true,
@@ -4704,7 +4704,7 @@ new InstallPromptManager();
 
 ```javascript
 // Tests Playwright pour PWA
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test.describe('PWA Tests', () => {
     test('should have valid manifest', async ({ page }) => {
@@ -4953,3 +4953,7 @@ validator.validate();
 ```
 
 Cette infrastructure complète de développement, déploiement et validation garantit que votre PWA respecte tous les standards et offre une expérience utilisateur optimale sur toutes les plateformes.
+
+
+
+

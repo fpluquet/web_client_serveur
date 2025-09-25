@@ -68,7 +68,7 @@ class Calculator {
 module.exports = Calculator;
 
 // math.test.js - Tests unitaires
-const Calculator = require('./math');
+import Calculator from './math.js';
 
 describe('Calculator', () => {
   let calculator;
@@ -193,10 +193,10 @@ class UserService {
 }
 
 // userService.integration.test.js - Tests d'intégration
-const UserService = require('./userService');
-const UserRepository = require('./userRepository');
-const EmailService = require('./emailService');
-const Database = require('./database');
+import UserService from './userService.js';
+import UserRepository from './userRepository.js';
+import EmailService from './emailService.js';
+import Database from './database.js';
 
 describe('UserService Integration Tests', () => {
   let userService;
@@ -524,3 +524,6 @@ describe('User Management Application', () => {
 ## Conclusion
 
 Une stratégie de test complète combine plusieurs types de tests pour assurer la qualité du code, les performances et l'expérience utilisateur. L'automatisation de ces tests dans un pipeline CI/CD garantit une détection précoce des problèmes et une livraison fiable.
+
+
+

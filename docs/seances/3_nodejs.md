@@ -176,7 +176,7 @@ Node.js dispose de modules intégrés qui fournissent des fonctionnalités de ba
 
 ```javascript
 // Importation du module http
-const http = require('http');
+import http from 'http';
 
 // Création du serveur
 const serveur = http.createServer((requete, reponse) => {
@@ -221,7 +221,7 @@ Node.js s'accompagne de npm (Node Package Manager), qui permet d'installer et de
    Modifiez votre fichier `app.js` comme suit :
    
    ```javascript
-    const si  = require('systeminformation');
+    import si from 'systeminformation';
 
     setInterval(async () => {
       const cpu = await si.currentLoad();
@@ -300,8 +300,12 @@ Node.js fournit le module natif `fs` (File System) qui permet d'interagir avec l
 
 ```javascript
 // Importation du module fs
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Chemin du fichier à manipuler
 const filePath = path.join(__dirname, 'exemple.txt');
@@ -337,7 +341,7 @@ fs.writeFile(filePath, 'Nouveau contenu écrit de façon asynchrone.', 'utf8', (
 });
 
 // Version moderne avec Promises (disponible depuis Node.js 10)
-const fsPromises = require('fs').promises;
+import { promises as fsPromises } from 'fs';
 
 async function manipulerFichier() {
   try {
@@ -357,8 +361,12 @@ manipulerFichier();
 ### Manipulation de répertoires
 
 ```javascript
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Création d'un répertoire
 const dirPath = path.join(__dirname, 'nouveau-repertoire');
@@ -396,7 +404,7 @@ fs.readdir(__dirname, (err, files) => {
 // Version avec les promises
 async function explorerRepertoire(dir) {
   try {
-    const fsPromises = require('fs').promises;
+    import { promises as fsPromises } from 'fs';
     const files = await fsPromises.readdir(dir);
     
     console.log(`\nContenu du répertoire ${dir} :`);
@@ -427,8 +435,12 @@ explorerRepertoire(__dirname);
 Voici un exemple plus complet d'application Node.js qui analyse une structure de répertoire et génère un rapport sur les types de fichiers présents :
 
 ```javascript
-const fs = require('fs').promises;
-const path = require('path');
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function analyserRepertoire(repertoireCible) {
   // Statistiques
@@ -683,6 +695,13 @@ Installez le package `cowsay` et créez un script qui :
 2. Permet de choisir différents animaux (cow, dragon, tux)
 3. Lit le message depuis les arguments en ligne de commande
 
+Pour installer cowsay :
+```bash
+npm install cowsay
+```
+
+La documentation de `cowsay` n'est pas très explicite sur les animaux disponibles, mais voici quelques options courantes : `cow`, `dragon`, `tux`, `koala`, `moose`. Pour utiliser un animal spécifique, utilisez l'option `f` dans l'objet passé à `cowsay.say()`.
+
 **Exemples de sortie attendue :**
 
 ```bash
@@ -743,7 +762,7 @@ npm install cowsay
 ```javascript
 // cowsay-fun.js
 
-const cowsay = require('cowsay');
+import cowsay from 'cowsay';
 
 // Récupérer les arguments
 const args = process.argv.slice(2);
@@ -854,8 +873,12 @@ Usage: node notes.js add "votre note"
 ```javascript
 // notes.js
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const fichierNotes = path.join(__dirname, 'notes.txt');
 
@@ -1019,7 +1042,7 @@ Exemples:
 ```javascript
 // generateur-mdp.js
 
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 // Récupérer les arguments
 const args = process.argv.slice(2);
@@ -1310,8 +1333,8 @@ Exécution de `node analyseur-logs.js logs_vides.log` :
 ```javascript
 // analyseur-logs.js
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // Récupérer le fichier de log depuis les arguments
 const args = process.argv.slice(2);

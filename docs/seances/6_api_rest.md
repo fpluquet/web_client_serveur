@@ -125,8 +125,8 @@ L'authentification et l'autorisation sont des aspects cruciaux de la sécurité 
 Approche traditionnelle où l'état de session est maintenu côté serveur :
 
 ```javascript
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -150,7 +150,7 @@ app.use(session({
 Tokens autoportés contenant des informations d'authentification :
 
 ```javascript
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 // Génération du token
 const generateToken = (user) => {
@@ -188,8 +188,8 @@ const verifyToken = (token) => {
 Délégation d'accès via des providers externes (Google, GitHub, Facebook) :
 
 ```javascript
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
@@ -245,8 +245,8 @@ const apiKeyMiddleware = async (req, res, next) => {
 En production, HTTPS est obligatoire. Avec Express :
 
 ```javascript
-const https = require('https');
-const fs = require('fs');
+import https from 'https';
+import fs from 'fs';
 
 const options = {
   key: fs.readFileSync('path/to/private-key.pem'),
@@ -272,7 +272,7 @@ app.use((req, res, next) => {
 Configuration précise des accès cross-origin :
 
 ```javascript
-const cors = require('cors');
+import cors from 'cors';
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -298,7 +298,7 @@ app.use(cors(corsOptions));
 Protection contre les attaques XSS :
 
 ```javascript
-const helmet = require('helmet');
+import helmet from 'helmet';
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -321,7 +321,7 @@ app.use(helmet({
 **Avec Joi :**
 
 ```javascript
-const Joi = require('joi');
+import Joi from 'joi';
 
 const userSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -350,7 +350,7 @@ const validateUser = (req, res, next) => {
 
 **Avec express-validator :**
 ```javascript
-const { body, validationResult } = require('express-validator');
+import { body, validationResult } from 'express-validator';
 
 const validateUserRules = [
   body('email')
@@ -491,8 +491,8 @@ app.use(errorHandler);
 Protection contre les attaques par déni de service et les abus :
 
 ```javascript
-const rateLimit = require('express-rate-limit');
-const MongoStore = require('rate-limit-mongo');
+import rateLimit from 'express-rate-limit';
+import MongoStore from 'rate-limit-mongo';
 
 // Rate limiting global
 const globalLimiter = rateLimit({
@@ -595,20 +595,20 @@ api-project/
 
 **Configuration principale (src/app.js)**
 ```javascript
-const express = require('express');
-const mongoose = require('mongoose');
-const helmet = require('helmet');
-const cors = require('cors');
-const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+import express from 'express';
+import mongoose from 'mongoose';
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import 'dotenv/config';
 
 // Import des routes
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
 
 // Import des middlewares
-const errorHandler = require('./middleware/errorHandler');
-const { notFoundHandler } = require('./middleware/errorHandler');
+import errorHandler from './middleware/errorHandler.js';
+import { notFoundHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
@@ -663,8 +663,8 @@ module.exports = app;
 
 **src/models/User.js**
 ```javascript
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -764,9 +764,9 @@ module.exports = mongoose.model('User', userSchema);
 
 **src/controllers/authController.js**
 ```javascript
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const { AppError, AuthenticationError } = require('../middleware/errorHandler');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import { AppError, AuthenticationError } from '../middleware/errorHandler.js';
 
 // Fonction utilitaire pour générer un JWT
 const signToken = (id) => {
@@ -873,8 +873,8 @@ exports.refreshToken = async (req, res, next) => {
 
 **src/controllers/userController.js**
 ```javascript
-const User = require('../models/User');
-const { AppError } = require('../middleware/errorHandler');
+import User from '../models/User.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 exports.getAllUsers = async (req, res, next) => {
   try {
@@ -1051,10 +1051,10 @@ exports.deleteMe = async (req, res, next) => {
 
 **src/middleware/auth.js**
 ```javascript
-const jwt = require('jsonwebtoken');
-const { promisify } = require('util');
-const User = require('../models/User');
-const { AppError, AuthenticationError, AuthorizationError } = require('./errorHandler');
+import jwt from 'jsonwebtoken';
+import { promisify } from 'util';
+import User from '../models/User.js';
+import { AppError, AuthenticationError, AuthorizationError } from './errorHandler.js';
 
 exports.protect = async (req, res, next) => {
   try {
@@ -1119,10 +1119,10 @@ exports.isOwnerOrAdmin = (req, res, next) => {
 
 **src/routes/auth.js**
 ```javascript
-const express = require('express');
-const authController = require('../controllers/authController');
-const { protect } = require('../middleware/auth');
-const { validateRegistration, validateLogin } = require('../middleware/validation');
+import express from 'express';
+import authController from '../controllers/authController.js';
+import { protect } from '../middleware/auth.js';
+import { validateRegistration, validateLogin } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -1136,10 +1136,10 @@ module.exports = router;
 
 **src/routes/users.js**
 ```javascript
-const express = require('express');
-const userController = require('../controllers/userController');
-const { protect, restrictTo, isOwnerOrAdmin } = require('../middleware/auth');
-const { validateUserUpdate } = require('../middleware/validation');
+import express from 'express';
+import userController from '../controllers/userController.js';
+import { protect, restrictTo, isOwnerOrAdmin } from '../middleware/auth.js';
+import { validateUserUpdate } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -1184,3 +1184,15 @@ Implémentez des tests unitaires et d'intégration pour l'API en utilisant Jest 
 Créez une documentation complète de votre API en utilisant Swagger/OpenAPI.
 
 Ces exercices permettront de consolider les connaissances acquises et d'approfondir la maîtrise des APIs RESTful avec Node.js et Express.
+
+
+
+
+
+
+
+
+
+
+
+

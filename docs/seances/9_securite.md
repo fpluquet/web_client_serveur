@@ -137,8 +137,8 @@ Cette catégorie couvre tous les échecs liés à la cryptographie, incluant l'a
 
 **Exemple de protection :**
 ```javascript
-const crypto = require('crypto');
-const bcrypt = require('bcrypt');
+import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 
 // ❌ Hachage faible
 const weakHash = crypto.createHash('md5').update(password).digest('hex');
@@ -282,7 +282,7 @@ app.get('/search', (req, res) => {
 });
 
 // ✅ Protection par échappement HTML
-const escapeHtml = require('escape-html');
+import escapeHtml from 'escape-html';
 
 app.get('/search', (req, res) => {
     const query = req.query.q;
@@ -318,8 +318,8 @@ app.get('/comments', (req, res) => {
 });
 
 // ✅ Protection avec sanitisation
-const DOMPurify = require('dompurify');
-const { JSDOM } = require('jsdom');
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
 
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
@@ -382,7 +382,7 @@ app.post('/transfer', authenticateUser, (req, res) => {
 });
 
 // ✅ Protection CSRF avec token
-const csrf = require('csurf');
+import csrf from 'csurf';
 const csrfProtection = csrf({ cookie: true });
 
 app.use(csrfProtection);
@@ -441,7 +441,7 @@ Il est crucial de bien distinguer ces deux concepts souvent confondus :
 L'authentification par mot de passe reste la méthode la plus répandue, mais elle doit être implémentée avec le plus grand soin. Le stockage en clair des mots de passe est une faute professionnelle grave qui expose tous vos utilisateurs en cas de compromission.
 
 ```javascript
-const bcrypt = require('bcrypt');
+import bcrypt from 'bcrypt';
 
 // Hachage sécurisé du mot de passe lors de l'inscription
 const hashPassword = async (password) => {
@@ -499,8 +499,8 @@ function isPasswordStrong(password) {
 Les JWT offrent une alternative moderne aux sessions traditionnelles, particulièrement adaptée aux architectures distribuées et aux API RESTful. Un JWT est un token auto-contenu qui encode les informations d'authentification de manière sécurisée.
 
 ```javascript
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 // Configuration sécurisée pour JWT
 const JWT_CONFIG = {
@@ -623,8 +623,8 @@ app.post('/login', async (req, res) => {
 L'authentification à deux facteurs ajoute une couche de sécurité supplémentaire en demandant quelque chose que l'utilisateur possède (son téléphone) en plus de quelque chose qu'il connaît (son mot de passe).
 
 ```javascript
-const speakeasy = require('speakeasy');
-const QRCode = require('qrcode');
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 
 // Configuration et génération du secret 2FA pour un utilisateur
 const setup2FA = async (userId, userEmail) => {
@@ -983,7 +983,7 @@ app.delete('/documents/:id', verifyToken, authorizeABAC('document', 'delete'), (
 #### Révocation de tokens et blacklist
 
 ```javascript
-const redis = require('redis');
+import redis from 'redis';
 const client = redis.createClient();
 
 // Blacklist des tokens révoqués
@@ -1060,9 +1060,9 @@ Transport Layer Security (TLS), successeur de Secure Sockets Layer (SSL), est le
 #### Configuration HTTPS robuste
 
 ```javascript
-const https = require('https');
-const fs = require('fs');
-const express = require('express');
+import https from 'https';
+import fs from 'fs';
+import express from 'express';
 
 const app = express();
 
@@ -1088,7 +1088,7 @@ const tlsOptions = {
     honorCipherOrder: true,
     
     // Désactiver la compression pour éviter CRIME/BREACH
-    secureOptions: require('constants').SSL_OP_NO_COMPRESSION
+    secureOptions: import('constants').then(constants => constants.SSL_OP_NO_COMPRESSION)
 };
 
 // Création du serveur HTTPS
@@ -1138,7 +1138,7 @@ Les headers de sécurité HTTP fournissent des instructions aux navigateurs sur 
 #### Configuration complète avec Helmet
 
 ```javascript
-const helmet = require('helmet');
+import helmet from 'helmet';
 
 // Configuration exhaustive des headers de sécurité
 app.use(helmet({
@@ -1341,7 +1341,7 @@ Cross-Origin Resource Sharing (CORS) est un mécanisme qui permet à des ressour
 #### Configuration CORS granulaire
 
 ```javascript
-const cors = require('cors');
+import cors from 'cors';
 
 // Configuration CORS dynamique et sécurisée
 const corsOptions = {
@@ -1482,8 +1482,8 @@ function validatePreflightRequest(origin, method, headers) {
 #### Détection d'anomalies de trafic
 
 ```javascript
-const rateLimit = require('express-rate-limit');
-const slowDown = require('express-slow-down');
+import rateLimit from 'express-rate-limit';
+import slowDown from 'express-slow-down';
 
 // Limitation adaptative du taux de requêtes
 const createAdaptiveRateLimit = (windowMs, maxRequests) => {
@@ -1553,7 +1553,7 @@ app.use('/api/', createAdaptiveRateLimit(15 * 60 * 1000, 100));
 #### Logging et alertes de sécurité
 
 ```javascript
-const winston = require('winston');
+import winston from 'winston';
 
 // Configuration du logger de sécurité
 const securityLogger = winston.createLogger({
@@ -1635,7 +1635,7 @@ const logSecurityEvent = (eventType, details) => {
 
 // Système d'alertes (exemple avec email)
 const alertSecurityTeam = async (eventType, details) => {
-    const nodemailer = require('nodemailer');
+    import nodemailer from 'nodemailer';
     
     const transporter = nodemailer.createTransporter({
         // Configuration SMTP
@@ -1684,8 +1684,8 @@ Ces deux processus sont complémentaires et doivent être appliqués systématiq
 La validation côté serveur est absolument critique car elle ne peut pas être contournée par un attaquant. Contrairement à la validation côté client, qui peut être désactivée ou modifiée, la validation serveur constitue votre dernier rempart contre les données malveillantes.
 
 ```javascript
-const Joi = require('joi');
-const validator = require('validator');
+import Joi from 'joi';
+import validator from 'validator';
 
 // Schémas de validation complets avec Joi
 const userRegistrationSchema = Joi.object({
@@ -1915,9 +1915,10 @@ function containsPersonalInfo(password) {
 Les uploads de fichiers représentent un vecteur d'attaque majeur. Une validation rigoureuse est essentielle :
 
 ```javascript
-const multer = require('multer');
-const path = require('path');
-const crypto = require('crypto');
+import multer from 'multer';
+import fileType from 'file-type';
+import path from 'path';
+import crypto from 'crypto';
 
 // Configuration sécurisée de multer
 const createSecureUpload = (allowedTypes, maxSize = 5 * 1024 * 1024) => {
@@ -1980,12 +1981,12 @@ const validateUploadedFile = async (req, res, next) => {
         const filePath = req.file.path;
         
         // Vérification du contenu réel du fichier
-        const fileBuffer = require('fs').readFileSync(filePath);
-        const actualMimeType = require('file-type').fromBuffer(fileBuffer);
+        const fileBuffer = fs.readFileSync(filePath);
+        const actualMimeType = fileType.fromBuffer(fileBuffer);
         
         if (!actualMimeType || actualMimeType.mime !== req.file.mimetype) {
             // Supprimer le fichier suspect
-            require('fs').unlinkSync(filePath);
+            fs.unlinkSync(filePath);
             return res.status(400).json({
                 error: 'Le contenu du fichier ne correspond pas à son type déclaré'
             });
@@ -1994,7 +1995,7 @@ const validateUploadedFile = async (req, res, next) => {
         // Scan antivirus (exemple avec ClamAV)
         const isClean = await scanFileForVirus(filePath);
         if (!isClean) {
-            require('fs').unlinkSync(filePath);
+            fs.unlinkSync(filePath);
             return res.status(400).json({
                 error: 'Fichier potentiellement dangereux détecté'
             });
@@ -2005,7 +2006,7 @@ const validateUploadedFile = async (req, res, next) => {
         console.error('Erreur lors de la validation du fichier:', error);
         // Supprimer le fichier en cas d'erreur
         if (req.file?.path) {
-            require('fs').unlinkSync(req.file.path);
+            fs.unlinkSync(req.file.path);
         }
         res.status(500).json({ error: 'Erreur lors de la validation du fichier' });
     }
@@ -2045,7 +2046,7 @@ async function scanFileForVirus(filePath) {
     // Implémentation d'un scan antivirus
     // Exemple avec ClamAV via node-clam
     try {
-        const clam = require('clamscan');
+        import clam from 'clamscan';
         const clamscan = await new clam().init();
         const scanResult = await clamscan.isInfected(filePath);
         return !scanResult;
@@ -2061,9 +2062,9 @@ async function scanFileForVirus(filePath) {
 #### Sanitisation HTML et protection XSS
 
 ```javascript
-const DOMPurify = require('dompurify');
-const { JSDOM } = require('jsdom');
-const validator = require('validator');
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+import validator from 'validator';
 
 // Configuration DOMPurify pour différents contextes
 const createDOMPurifier = (strictness = 'moderate') => {
@@ -2266,9 +2267,9 @@ app.post('/blog/posts',
 #### Limitation adaptative du taux de requêtes
 
 ```javascript
-const rateLimit = require('express-rate-limit');
-const slowDown = require('express-slow-down');
-const MongoStore = require('rate-limit-mongo');
+import rateLimit from 'express-rate-limit';
+import slowDown from 'express-slow-down';
+import MongoStore from 'rate-limit-mongo';
 
 // Stockage distribué pour les limiteurs de taux
 const createDistributedRateLimit = (windowMs, maxRequests, options = {}) => {
@@ -2729,7 +2730,7 @@ describe('Tests de sécurité', () => {
 
 ### Monitoring et alertes
 ```javascript
-const winston = require('winston');
+import winston from 'winston';
 
 // Configuration du logging sécurisé
 const logger = winston.createLogger({
@@ -2818,3 +2819,18 @@ La sécurité des applications web est un domaine en constante évolution qui n�
 - [MDN Web Security](https://developer.mozilla.org/en-US/docs/Web/Security)
 - [Node.js Security Best Practices](https://nodejs.org/en/docs/guides/security/)
 - [Express.js Security Best Practices](https://expressjs.com/en/advanced/best-practice-security.html)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
