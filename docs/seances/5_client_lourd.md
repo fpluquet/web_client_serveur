@@ -21,11 +21,8 @@ L'index.html contiendra la structure de base de notre application, avec une barr
 
 Le fichier `app.js` gérera la navigation entre les différentes vues et les interactions utilisateur, en remplaçant le contenu du conteneur principal par le contenu approprié sans recharger la page.
 
-<details>
-<summary>Le fichier index.html</summary>
-
+::: details Le fichier index.html
 ```html
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -49,12 +46,9 @@ Le fichier `app.js` gérera la navigation entre les différentes vues et les int
 </body>
 </html>
 ```
-</details>
+:::
 
-<details>
-<summary> Le fichier app.js </summary>
-
-
+::: details Le fichier app.js
 ```javascript
 // app.js
 document.addEventListener('DOMContentLoaded', () => {
@@ -132,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const route = e.target.getAttribute('data-route');
       navigateTo(route);
-      // Mettre ���� jour l'URL sans recharger la page (navigation historique)
+      // Mettre à jour l'URL sans recharger la page (navigation historique)
       window.history.pushState(null, routes[route].title, `#${route}`);
     });
   });
@@ -208,7 +202,144 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 ```
-</details>
+:::
+
+::: details Le fichier style.css
+```css
+/* Styles pour SPA Basique */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  background-color: #f4f4f4;
+}
+
+nav {
+  background-color: #333;
+  padding: 1rem;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  margin-right: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+nav a:hover {
+  background-color: #555;
+}
+
+#app {
+  max-width: 800px;
+  margin: 2rem auto;
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.page h1 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.page p {
+  margin-bottom: 1rem;
+  color: #666;
+}
+
+button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.data-list {
+  list-style: none;
+  margin-top: 1rem;
+}
+
+.data-list li {
+  background: #f8f9fa;
+  margin-bottom: 0.5rem;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+.data-list h4 {
+  color: #007bff;
+  margin-bottom: 0.5rem;
+}
+
+.success {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.error {
+  color: #dc3545;
+}
+```
+:::
+
+### Test de l'application SPA
+
+Pour tester cette application :
+
+1. **Naviguez vers le dossier :**
+   ```bash
+   cd code/seance5/spa-basique
+   ```
+
+2. **Démarrez un serveur web local :**
+   ```bash
+   # Avec Python (si installé)
+   python -m http.server 8000
+   
+   # Ou avec Node.js (si vous avez npx)
+   npx serve .
+   
+   # Ou utilisez l'extension Live Server de VS Code
+   ```
+
+3. **Ouvrez votre navigateur à l'adresse indiquée** (généralement http://localhost:8000)
 
 ### Exercice 1.1: Étendre l'application SPA
 
@@ -238,6 +369,7 @@ todolist-client-lourd/
 
 Créons d'abord notre serveur Express qui fournira une API REST simple :
 
+::: details server/server.js
 ```javascript
 // server/server.js
 import express from 'express';
@@ -329,14 +461,16 @@ app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
 ```
+:::
 
+::: details server/package.json
 ```json
-// server/package.json
 {
   "name": "todolist-api",
   "version": "1.0.0",
   "description": "API REST simple pour todolist",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
@@ -350,13 +484,14 @@ app.listen(PORT, () => {
   }
 }
 ```
+:::
 
 ### Côté client (Application JavaScript)
 
 Maintenant, créons le client lourd qui va consommer notre API :
 
+::: details client/index.html
 ```html
-<!-- client/index.html -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -404,7 +539,9 @@ Maintenant, créons le client lourd qui va consommer notre API :
 </body>
 </html>
 ```
+:::
 
+::: details client/js/app.js
 ```javascript
 // client/js/app.js
 class TodoApp {
@@ -588,7 +725,9 @@ class TodoApp {
 // Initialiser l'application
 const app = new TodoApp();
 ```
+:::
 
+::: details client/css/style.css
 ```css
 /* client/css/style.css */
 * {
@@ -823,12 +962,13 @@ button[type="submit"]:hover {
   }
 }
 ```
+:::
 
 ### Instructions de démarrage
 
 1. **Installation des dépendances du serveur :**
    ```bash
-   cd server
+   cd code/seance5/todolist-client-lourd/server
    npm install
    ```
 

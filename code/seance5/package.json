@@ -1,0 +1,14 @@
+{
+  "name": "seance5-client-lourd",
+  "version": "1.0.0",
+  "description": "Exemples pour la séance 5 - Architecture Client Lourd",
+  "scripts": {
+    "spa": "cd spa-basique && python -m http.server 8000",
+    "todolist:install": "cd todolist-client-lourd/server && npm install",
+    "todolist:start": "cd todolist-client-lourd/server && npm start",
+    "todolist:dev": "cd todolist-client-lourd/server && npm run dev"
+  },
+  "keywords": ["spa", "client-lourd", "api-rest", "javascript"],
+  "author": "HELHa",
+  "license": "MIT"
+}

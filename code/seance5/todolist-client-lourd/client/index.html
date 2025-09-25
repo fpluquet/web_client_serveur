@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TodoList - Client Lourd</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Ma TodoList</h1>
+      <p>Exemple de client lourd avec API REST</p>
+    </header>
+
+    <main>
+      <!-- Formulaire pour ajouter une todo -->
+      <div class="add-todo-section">
+        <form id="add-todo-form">
+          <input type="text" id="todo-input" placeholder="Nouvelle tâche..." required>
+          <button type="submit">Ajouter</button>
+        </form>
+      </div>
+
+      <!-- Liste des todos -->
+      <div class="todos-section">
+        <div class="todos-header">
+          <h2>Mes tâches</h2>
+          <div class="todos-count">
+            <span id="total-count">0</span> tâche(s) - 
+            <span id="pending-count">0</span> en cours
+          </div>
+        </div>
+        <div id="todos-container">
+          <p class="loading">Chargement des tâches...</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Zone de notifications -->
+    <div id="notifications"></div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
