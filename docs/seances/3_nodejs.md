@@ -201,6 +201,117 @@ node app.js
 
 Ouvrez ensuite votre navigateur et accédez à `http://localhost:3000` pour voir le résultat.
 
+## Syntaxe d'importation : `require` vs `import`
+
+Node.js supporte deux syntaxes pour importer des modules : la syntaxe CommonJS (`require`) et la syntaxe ES Modules (`import`).
+
+### CommonJS (require) - Syntaxe traditionnelle
+
+```javascript
+// Importation de modules intégrés
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+// Importation de modules externes
+const express = require('express');
+
+// Importation de modules locaux
+const myModule = require('./myModule');
+
+// Exportation CommonJS
+module.exports = {
+    myFunction: () => { /* ... */ },
+    myVariable: 'valeur'
+};
+```
+
+### ES Modules (import) - Syntaxe moderne
+
+```javascript
+// Importation de modules intégrés
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Importation de modules externes
+import express from 'express';
+
+// Importation de modules locaux (noter l'extension .js)
+import myModule from './myModule.js';
+
+// Importation sélective
+import { readFile, writeFile } from 'fs/promises';
+
+// Exportation ES Modules
+export default function myFunction() { /* ... */ }
+export const myVariable = 'valeur';
+```
+
+### Principales différences
+
+| Aspect | CommonJS (require) | ES Modules (import) |
+|--------|-------------------|---------------------|
+| **Chargement** | Synchrone | Asynchrone |
+| **Moment d'exécution** | Runtime (à l'exécution) | Parse time (à l'analyse) |
+| **Compatibilité** | Node.js natif | Nécessite configuration |
+| **Syntaxe** | `require()` / `module.exports` | `import` / `export` |
+| **Extensions de fichiers** | Optionnelles | Obligatoires pour les modules locaux |
+| **__dirname/__filename** | Disponibles directement | Nécessitent `import.meta.url` |
+
+### Configuration pour ES Modules
+
+Pour utiliser la syntaxe `import` dans Node.js, vous devez configurer votre projet :
+
+#### Option 1 : Modifier package.json
+```json
+{
+  "name": "mon-projet",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  }
+}
+```
+
+#### Option 2 : Utiliser l'extension .mjs
+```bash
+# Renommer le fichier
+mv app.js app.mjs
+
+# Exécuter le fichier
+node app.mjs
+```
+
+### Gestion de __dirname avec ES Modules
+
+Avec ES Modules, `__dirname` et `__filename` ne sont pas disponibles directement. Voici comment les obtenir :
+
+```javascript
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+console.log('Répertoire courant:', __dirname);
+console.log('Fichier courant:', __filename);
+```
+
+### Recommandations
+
+- **Pour de nouveaux projets** : Utilisez ES Modules (`import`) avec `"type": "module"` dans package.json
+- **Pour des projets existants** : CommonJS (`require`) reste parfaitement viable
+- **Cohérence** : Choisissez une syntaxe et gardez-la dans tout le projet
+- **Bibliothèques** : Vérifiez la compatibilité des packages npm avec votre choix
+
+::: tip
+Dans ce cours, nous utiliserons principalement la syntaxe ES Modules (`import`) car elle est plus moderne et alignée avec les standards JavaScript actuels.
+:::
+
 ### Installation de packages externes
 
 Node.js s'accompagne de npm (Node Package Manager), qui permet d'installer et de gérer des packages externes.
