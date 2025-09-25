@@ -1,8 +1,28 @@
 # Architecture Client Lourd
 
+Comme nous l'avons vu dans la section sur les clients légers ou lourds, un client lourd est une application web qui s'exécute principalement dans le navigateur de l'utilisateur, mais qui télécharge initialement une seule page HTML/CSS/JS. Ensuite, toute l'interaction avec l'application se fait via des appels API asynchrones (généralement REST ou GraphQL) pour récupérer ou envoyer des données.
+
+Nous allons montrer comment créer une application client lourd simple en JavaScript vanilla, puis comment cette application peut interagir avec un serveur backend via une API REST.
+
 ## 1. Mise en place d'une SPA basique avec JavaScript vanilla
 
-Créons une application à page unique simple sans framework :
+Créons une application à page unique simple sans framework. Pour cela, nous allons structurer notre projet comme suit :
+
+```
+spa-basique/
+├── index.html
+├── css/
+│   └── style.css
+└── js/
+    └── app.js
+```
+
+L'index.html contiendra la structure de base de notre application, avec une barre de navigation et un conteneur principal où les différentes "pages" seront injectées dynamiquement via JavaScript.
+
+Le fichier `app.js` gérera la navigation entre les différentes vues et les interactions utilisateur, en remplaçant le contenu du conteneur principal par le contenu approprié sans recharger la page.
+
+<details>
+<summary>Le fichier index.html</summary>
 
 ```html
 <!-- index.html -->
@@ -29,6 +49,11 @@ Créons une application à page unique simple sans framework :
 </body>
 </html>
 ```
+</details>
+
+<details>
+<summary> Le fichier app.js </summary>
+
 
 ```javascript
 // app.js
@@ -183,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 ```
+</details>
 
 ### Exercice 1.1: Étendre l'application SPA
 
