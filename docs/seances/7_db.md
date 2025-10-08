@@ -24,68 +24,65 @@ PUT remplace complètement une ressource existante, tandis que PATCH applique un
 **DELETE - Suppression de ressources**
 DELETE supprime une ressource existante. Elle est idempotente : supprimer une ressource déjà supprimée n'a pas d'effet de bord. Cela correspond aux opérations DELETE en SQL.
 
-### 2.2 Gestion des paramètres et validation des données
+### 2.2 Limitations du stockage en fichiers
 
-La gestion appropriée des paramètres d'entrée est cruciale pour la sécurité et la robustesse de l'application. En Express, nous avons plusieurs moyens de récupérer des données :
+Avant d'aborder les bases de données, il est important de comprendre pourquoi la sauvegarde des données dans de simples fichiers texte ou JSON n'est pas une solution robuste pour les applications web modernes.
+
+### Problèmes de concurrence
+
+Lorsque plusieurs utilisateurs accèdent simultanément à une application, les opérations de lecture et d'écriture sur des fichiers peuvent entrer en conflit. Imaginez deux utilisateurs qui tentent de créer un compte simultanément :
 
 ```javascript
-import express from 'express';
-const app = express();
+// Problème de concurrence avec les fichiers
+import fs from 'fs/promises';
 
-// Middleware pour parser le JSON
-app.use(express.json());
-
-// Middleware pour parser les données de formulaire
-app.use(express.urlencoded({ extended: true }));
-
-// Route avec paramètres d'URL et validation
-app.get('/users/:id', (req, res) => {
-    const userId = parseInt(req.params.id);
-    
-    // Validation du paramètre
-    if (isNaN(userId) || userId <= 0) {
-        return res.status(400).json({
-            error: 'Invalid user ID. Must be a positive integer.'
-        });
+async function createUser(userData) {
+    try {
+        // Lecture du fichier existant
+        const data = await fs.readFile('users.json', 'utf8');
+        const users = JSON.parse(data);
+        
+        // Ajout du nouvel utilisateur
+        const newUser = { id: users.length + 1, ...userData };
+        users.push(newUser);
+        
+        // Écriture du fichier - PROBLÈME : un autre processus peut 
+        // modifier le fichier entre la lecture et l'écriture !
+        await fs.writeFile('users.json', JSON.stringify(users, null, 2));
+        
+        return newUser;
+    } catch (error) {
+        throw new Error('Erreur lors de la création de l\'utilisateur');
     }
-    
-    // Paramètres de requête optionnels
-    const includeProfile = req.query.include_profile === 'true';
-    
-    // Logique de récupération des données
-    // ... (sera implémentée avec la base de données)
-});
-
-// Route POST avec validation du corps de requête
-app.post('/users', (req, res) => {
-    const { name, email, age } = req.body;
-    
-    // Validation des champs requis
-    if (!name || !email) {
-        return res.status(400).json({
-            error: 'Name and email are required fields.'
-        });
-    }
-    
-    // Validation du format email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        return res.status(400).json({
-            error: 'Invalid email format.'
-        });
-    }
-    
-    // Validation de l'âge si fourni
-    if (age !== undefined && (isNaN(age) || age < 0 || age > 150)) {
-        return res.status(400).json({
-            error: 'Age must be a number between 0 and 150.'
-        });
-    }
-    
-    // Logique de création
-    // ... (sera implémentée avec la base de données)
-});
+}
 ```
+
+### Absence de transactions
+
+Les fichiers ne supportent pas le concept de transactions. Si une opération complexe implique plusieurs modifications (par exemple, transférer de l'argent entre deux comptes), il n'y a aucun moyen de garantir que toutes les opérations réussissent ou échouent ensemble.
+
+### Performance et recherche
+
+Rechercher des données dans un fichier nécessite de le lire entièrement et de parcourir tous les enregistrements. Cette approche devient rapidement inefficace avec l'augmentation du volume de données :
+
+```javascript
+// Recherche inefficace dans un fichier
+async function findUserByEmail(email) {
+    const data = await fs.readFile('users.json', 'utf8');
+    const users = JSON.parse(data);
+    
+    // Parcours linéaire - O(n) complexité
+    return users.find(user => user.email === email);
+}
+```
+
+### Problèmes d'intégrité des données
+
+Les fichiers n'offrent aucune garantie sur la structure ou la validité des données. Un fichier corrompu ou une erreur d'écriture peut rendre toutes les données inutilisables.
+
+### Limitations de sauvegarde et récupération
+
+La sauvegarde d'un fichier en cours d'utilisation peut créer des incohérences. De plus, en cas de panne système, les données non sauvegardées sont perdues sans possibilité de récupération.
 
 ## 3. Introduction aux bases de données relationnelles
 
@@ -322,21 +319,397 @@ class MariaDBUserService {
 }
 ```
 
-## 4. Introduction aux ORM (Object-Relational Mapping)
+## 4. Introduction à MongoDB
 
-### 4.1 Pourquoi utiliser un ORM ?
+### 4.1 Qu'est-ce que MongoDB ?
 
-Les ORM (Object-Relational Mapping) transforment la façon dont nous interagissons avec les bases de données en créant une couche d'abstraction entre le code JavaScript et le SQL. Cette approche offre plusieurs avantages significatifs :
+MongoDB est une base de données NoSQL orientée documents qui stocke les données au format BSON (Binary JSON), un format binaire dérivé de JSON. Contrairement aux bases de données relationnelles qui organisent les données en tables avec des schémas fixes, MongoDB organise les données en collections de documents flexibles.
 
-**Productivité accrue** : Les ORM éliminent le besoin d'écrire du SQL répétitif, permettant aux développeurs de se concentrer sur la logique métier plutôt que sur les détails de la base de données.
+**Caractéristiques principales de MongoDB :**
 
-**Sécurité renforcée** : Les ORM intègrent automatiquement des protections contre les injections SQL en utilisant des requêtes préparées et en échappant les données utilisateur.
+- **Documents JSON** : Les données sont stockées sous forme de documents BSON, similaires aux objets JavaScript
+- **Schéma flexible** : Chaque document peut avoir une structure différente
+- **Requêtes riches** : Support des requêtes complexes, des index, et de l'agrégation
+- **Scalabilité horizontale** : Support natif de la réplication et du sharding
+- **Performance** : Optimisé pour les opérations de lecture et d'écriture rapides
 
-**Portabilité** : Le même code peut fonctionner avec différents systèmes de base de données (SQLite, MySQL, PostgreSQL) avec des modifications minimales.
+### 4.2 Installation et configuration de MongoDB
+
+**Installation de MongoDB (macOS avec Homebrew) :**
+
+```bash
+# Installation de MongoDB Community Edition
+brew tap mongodb/brew
+brew install mongodb-community
+
+# Démarrage du service MongoDB
+brew services start mongodb/brew/mongodb-community
+```
+
+**Installation du driver MongoDB pour Node.js :**
+
+```bash
+npm install mongodb
+```
+
+### 4.3 Connexion et opérations de base avec MongoDB
+
+**Configuration de la connexion :**
+
+```javascript
+import { MongoClient } from 'mongodb';
+
+class DatabaseService {
+    constructor() {
+        this.client = null;
+        this.db = null;
+        this.uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+        this.dbName = process.env.DB_NAME || 'myapp';
+    }
+
+    async connect() {
+        try {
+            this.client = new MongoClient(this.uri, {
+                useUnifiedTopology: true,
+            });
+            
+            await this.client.connect();
+            this.db = this.client.db(this.dbName);
+            console.log('Connecté à MongoDB');
+        } catch (error) {
+            console.error('Erreur de connexion à MongoDB:', error);
+            throw error;
+        }
+    }
+
+    async disconnect() {
+        if (this.client) {
+            await this.client.close();
+            console.log('Déconnecté de MongoDB');
+        }
+    }
+
+    getCollection(name) {
+        return this.db.collection(name);
+    }
+}
+
+const dbService = new DatabaseService();
+export default dbService;
+```
+
+### 4.4 Modèle de données et opérations CRUD
+
+**Exemple de structure de document utilisateur :**
+
+```javascript
+// Structure d'un document utilisateur dans MongoDB
+const userDocument = {
+    _id: new ObjectId(), // ID généré automatiquement par MongoDB
+    name: "Jean Dupont",
+    email: "jean.dupont@email.com",
+    age: 30,
+    profile: {
+        bio: "Développeur passionné",
+        avatar: "https://example.com/avatar.jpg",
+        socialLinks: {
+            twitter: "@jeandupont",
+            linkedin: "jean-dupont"
+        }
+    },
+    tags: ["développeur", "javascript", "mongodb"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+};
+```
+
+**Classe de service pour les opérations CRUD :**
+
+```javascript
+import { ObjectId } from 'mongodb';
+import dbService from './database.js';
+
+class UserService {
+    constructor() {
+        this.collection = null;
+    }
+
+    async initialize() {
+        this.collection = dbService.getCollection('users');
+        
+        // Création d'index pour optimiser les performances
+        await this.collection.createIndex({ email: 1 }, { unique: true });
+        await this.collection.createIndex({ name: "text" }); // Index de recherche textuelle
+    }
+
+    // CREATE - Création d'un utilisateur
+    async create(userData) {
+        try {
+            const newUser = {
+                ...userData,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+            
+            const result = await this.collection.insertOne(newUser);
+            return { _id: result.insertedId, ...newUser };
+        } catch (error) {
+            if (error.code === 11000) {
+                throw new Error('Un utilisateur avec cet email existe déjà');
+            }
+            throw error;
+        }
+    }
+
+    // READ - Lecture d'un utilisateur par ID
+    async findById(id) {
+        try {
+            const objectId = new ObjectId(id);
+            return await this.collection.findOne({ _id: objectId });
+        } catch (error) {
+            throw new Error('ID utilisateur invalide');
+        }
+    }
+
+    // READ - Recherche d'utilisateurs avec filtres
+    async find(filters = {}, options = {}) {
+        const {
+            page = 1,
+            limit = 10,
+            sortBy = 'createdAt',
+            sortOrder = -1,
+            search
+        } = options;
+
+        let query = { ...filters };
+
+        // Ajout de la recherche textuelle si fournie
+        if (search) {
+            query.$text = { $search: search };
+        }
+
+        const skip = (page - 1) * limit;
+
+        const [users, total] = await Promise.all([
+            this.collection
+                .find(query)
+                .sort({ [sortBy]: sortOrder })
+                .skip(skip)
+                .limit(limit)
+                .toArray(),
+            this.collection.countDocuments(query)
+        ]);
+
+        return {
+            users,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(total / limit),
+                totalItems: total,
+                itemsPerPage: limit
+            }
+        };
+    }
+
+    // UPDATE - Mise à jour d'un utilisateur
+    async update(id, updateData) {
+        try {
+            const objectId = new ObjectId(id);
+            const updateDoc = {
+                $set: {
+                    ...updateData,
+                    updatedAt: new Date()
+                }
+            };
+
+            const result = await this.collection.updateOne(
+                { _id: objectId },
+                updateDoc
+            );
+
+            if (result.matchedCount === 0) {
+                throw new Error('Utilisateur non trouvé');
+            }
+
+            return await this.findById(id);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // DELETE - Suppression d'un utilisateur
+    async delete(id) {
+        try {
+            const objectId = new ObjectId(id);
+            const result = await this.collection.deleteOne({ _id: objectId });
+            
+            if (result.deletedCount === 0) {
+                throw new Error('Utilisateur non trouvé');
+            }
+
+            return { success: true, deletedCount: result.deletedCount };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // Opérations avancées avec MongoDB
+    async getUserStats() {
+        return await this.collection.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalUsers: { $sum: 1 },
+                    avgAge: { $avg: "$age" },
+                    oldestUser: { $max: "$age" },
+                    youngestUser: { $min: "$age" }
+                }
+            }
+        ]).toArray();
+    }
+
+    async getUsersByAgeRange(minAge, maxAge) {
+        return await this.collection.find({
+            age: { $gte: minAge, $lte: maxAge }
+        }).toArray();
+    }
+}
+
+export default UserService;
+```
+
+### 4.5 Intégration avec Express
+
+**Contrôleur Express utilisant MongoDB :**
+
+```javascript
+import express from 'express';
+import UserService from '../services/UserService.js';
+import dbService from '../services/database.js';
+
+const router = express.Router();
+const userService = new UserService();
+
+// Middleware d'initialisation
+router.use(async (req, res, next) => {
+    if (!userService.collection) {
+        await userService.initialize();
+    }
+    next();
+});
+
+// GET /users - Liste des utilisateurs avec pagination et recherche
+router.get('/', async (req, res) => {
+    try {
+        const {
+            page = 1,
+            limit = 10,
+            search,
+            minAge,
+            maxAge,
+            sortBy = 'createdAt',
+            sortOrder = 'desc'
+        } = req.query;
+
+        let filters = {};
+        
+        // Filtrage par âge si fourni
+        if (minAge || maxAge) {
+            filters.age = {};
+            if (minAge) filters.age.$gte = parseInt(minAge);
+            if (maxAge) filters.age.$lte = parseInt(maxAge);
+        }
+
+        const options = {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            search,
+            sortBy,
+            sortOrder: sortOrder === 'desc' ? -1 : 1
+        };
+
+        const result = await userService.find(filters, options);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /users - Création d'un utilisateur
+router.post('/', async (req, res) => {
+    try {
+        const user = await userService.create(req.body);
+        res.status(201).json(user);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// GET /users/:id - Récupération d'un utilisateur
+router.get('/:id', async (req, res) => {
+    try {
+        const user = await userService.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ error: 'Utilisateur non trouvé' });
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// PUT /users/:id - Mise à jour d'un utilisateur
+router.put('/:id', async (req, res) => {
+    try {
+        const user = await userService.update(req.params.id, req.body);
+        res.json(user);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// DELETE /users/:id - Suppression d'un utilisateur
+router.delete('/:id', async (req, res) => {
+    try {
+        await userService.delete(req.params.id);
+        res.status(204).send();
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+export default router;
+```
+
+### 4.6 Avantages et inconvénients de MongoDB
+
+**Avantages :**
+- **Flexibilité du schéma** : Parfait pour des données qui évoluent rapidement
+- **Performance** : Excellent pour les applications avec beaucoup de lectures
+- **Scalabilité** : Facilité de scaling horizontal
+- **Développement rapide** : Structure proche du JavaScript natif
+
+**Inconvénients :**
+- **Consistance** : Par défaut, privilégie la disponibilité à la consistance stricte
+- **Transactions** : Support limité des transactions ACID complexes
+- **Stockage** : Peut consommer plus d'espace que les bases relationnelles
+- **Apprentissage** : Requiert une approche différente de la modélisation des données
+
+## 5. Introduction aux ORM et ODM (Object-Relational/Document Mapping)
+
+### 5.1 Pourquoi utiliser un ORM ou un ODM ?
+
+Les ORM (Object-Relational Mapping) et ODM (Object-Document Mapping) transforment la façon dont nous interagissons avec les bases de données en créant une couche d'abstraction entre le code JavaScript et les requêtes de base de données. Cette approche offre plusieurs avantages significatifs :
+
+**Productivité accrue** : Les ORM/ODM éliminent le besoin d'écrire des requêtes répétitives, permettant aux développeurs de se concentrer sur la logique métier plutôt que sur les détails de la base de données.
+
+**Sécurité renforcée** : Les ORM intègrent automatiquement des protections contre les injections SQL en utilisant des requêtes préparées et en échappant les données utilisateur. Les ODM offrent des validations et des sanitisations des données.
+
+**Portabilité** : Le même code peut fonctionner avec différents systèmes de base de données avec des modifications minimales.
 
 **Maintenance simplifiée** : Les migrations de schéma et les évolutions de structure de base de données sont gérées de manière cohérente et versionnée.
 
-### 4.2 Sequelize : L'ORM mature pour Node.js
+### 5.2 Sequelize : L'ORM mature pour les bases de données relationnelles
 
 Sequelize est l'un des ORM les plus populaires et matures pour Node.js. Il supporte TypeScript nativement et offre une API riche pour la gestion des modèles, des associations, et des migrations.
 
@@ -576,9 +949,596 @@ class SequelizeUserService {
 }
 ```
 
-## 5. Construction d'une API RESTful complète
+### 5.3 Mongoose : L'ODM élégant pour MongoDB
 
-### 5.1 Architecture MVC avec Express
+Mongoose est l'ODM (Object-Document Mapping) le plus populaire pour MongoDB en Node.js. Il apporte une couche d'abstraction puissante avec des schémas, des validations, des middlewares, et des méthodes de requête intuitives.
+
+**Installation et configuration :**
+
+```bash
+npm install mongoose
+```
+
+**Configuration de la connexion :**
+
+```javascript
+import mongoose from 'mongoose';
+
+class MongooseService {
+    constructor() {
+        this.isConnected = false;
+    }
+
+    async connect() {
+        try {
+            const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/myapp';
+            
+            await mongoose.connect(mongoUri, {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+            });
+
+            this.isConnected = true;
+            console.log('Connecté à MongoDB via Mongoose');
+
+            // Gestion des événements de connexion
+            mongoose.connection.on('error', (err) => {
+                console.error('Erreur de connexion MongoDB:', err);
+            });
+
+            mongoose.connection.on('disconnected', () => {
+                console.log('Déconnecté de MongoDB');
+                this.isConnected = false;
+            });
+
+        } catch (error) {
+            console.error('Erreur lors de la connexion à MongoDB:', error);
+            throw error;
+        }
+    }
+
+    async disconnect() {
+        if (this.isConnected) {
+            await mongoose.connection.close();
+            console.log('Connexion MongoDB fermée');
+        }
+    }
+}
+
+export default new MongooseService();
+```
+
+**Définition de schémas et modèles :**
+
+```javascript
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+
+// Définition du schéma utilisateur
+const userSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: [true, 'Le nom est obligatoire'],
+        trim: true,
+        minlength: [2, 'Le nom doit faire au moins 2 caractères'],
+        maxlength: [50, 'Le nom ne peut pas dépasser 50 caractères']
+    },
+    email: {
+        type: String,
+        required: [true, 'L\'email est obligatoire'],
+        unique: true,
+        lowercase: true,
+        trim: true,
+        match: [/^\S+@\S+\.\S+$/, 'Format d\'email invalide']
+    },
+    password: {
+        type: String,
+        required: [true, 'Le mot de passe est obligatoire'],
+        minlength: [6, 'Le mot de passe doit faire au moins 6 caractères'],
+        select: false // N'inclut pas le mot de passe dans les requêtes par défaut
+    },
+    age: {
+        type: Number,
+        min: [13, 'L\'âge minimum est 13 ans'],
+        max: [120, 'L\'âge maximum est 120 ans']
+    },
+    profile: {
+        bio: {
+            type: String,
+            maxlength: [500, 'La bio ne peut pas dépasser 500 caractères']
+        },
+        avatar: {
+            type: String,
+            match: [/^https?:\/\/.+/, 'L\'avatar doit être une URL valide']
+        },
+        socialLinks: {
+            twitter: String,
+            linkedin: String,
+            github: String
+        }
+    },
+    tags: [{
+        type: String,
+        trim: true
+    }],
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    role: {
+        type: String,
+        enum: ['user', 'admin', 'moderator'],
+        default: 'user'
+    }
+}, {
+    timestamps: true, // Ajoute automatiquement createdAt et updatedAt
+    toJSON: { virtuals: true }, // Inclut les propriétés virtuelles dans JSON
+    toObject: { virtuals: true }
+});
+
+// Propriété virtuelle (calculée dynamiquement)
+userSchema.virtual('fullProfile').get(function() {
+    return {
+        name: this.name,
+        email: this.email,
+        age: this.age,
+        bio: this.profile?.bio,
+        memberSince: this.createdAt
+    };
+});
+
+// Middleware pre-save pour hasher le mot de passe
+userSchema.pre('save', async function(next) {
+    // Seulement si le mot de passe a été modifié
+    if (!this.isModified('password')) return next();
+
+    try {
+        // Hash du mot de passe avec bcrypt
+        const saltRounds = 12;
+        this.password = await bcrypt.hash(this.password, saltRounds);
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
+
+// Méthode d'instance pour vérifier le mot de passe
+userSchema.methods.comparePassword = async function(candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Méthodes statiques personnalisées
+userSchema.statics.findByEmail = function(email) {
+    return this.findOne({ email: email.toLowerCase() });
+};
+
+userSchema.statics.findActiveUsers = function() {
+    return this.find({ isActive: true });
+};
+
+userSchema.statics.searchByName = function(searchTerm) {
+    return this.find({
+        name: { $regex: searchTerm, $options: 'i' }
+    });
+};
+
+// Index pour optimiser les performances
+userSchema.index({ email: 1 });
+userSchema.index({ name: 'text', 'profile.bio': 'text' });
+userSchema.index({ tags: 1 });
+userSchema.index({ createdAt: -1 });
+
+// Création du modèle
+const User = mongoose.model('User', userSchema);
+
+export default User;
+```
+
+**Service utilisant Mongoose :**
+
+```javascript
+import User from '../models/User.js';
+
+class UserService {
+    // CREATE - Création d'un utilisateur
+    async create(userData) {
+        try {
+            const user = new User(userData);
+            const savedUser = await user.save();
+            
+            // Retourner l'utilisateur sans le mot de passe
+            return await User.findById(savedUser._id).select('-password');
+        } catch (error) {
+            if (error.code === 11000) {
+                throw new Error('Un utilisateur avec cet email existe déjà');
+            }
+            if (error.name === 'ValidationError') {
+                const messages = Object.values(error.errors).map(err => err.message);
+                throw new Error(`Erreurs de validation: ${messages.join(', ')}`);
+            }
+            throw error;
+        }
+    }
+
+    // READ - Récupération d'un utilisateur par ID
+    async findById(id) {
+        try {
+            const user = await User.findById(id).select('-password');
+            if (!user) {
+                throw new Error('Utilisateur non trouvé');
+            }
+            return user;
+        } catch (error) {
+            if (error.name === 'CastError') {
+                throw new Error('ID utilisateur invalide');
+            }
+            throw error;
+        }
+    }
+
+    // READ - Recherche d'utilisateurs avec pagination et filtres
+    async find(filters = {}, options = {}) {
+        const {
+            page = 1,
+            limit = 10,
+            sortBy = 'createdAt',
+            sortOrder = 'desc',
+            search,
+            isActive,
+            role,
+            tags
+        } = options;
+
+        // Construction de la requête
+        let query = { ...filters };
+
+        // Filtrage par statut actif
+        if (isActive !== undefined) {
+            query.isActive = isActive;
+        }
+
+        // Filtrage par rôle
+        if (role) {
+            query.role = role;
+        }
+
+        // Filtrage par tags
+        if (tags && tags.length > 0) {
+            query.tags = { $in: tags };
+        }
+
+        // Recherche textuelle
+        if (search) {
+            query.$text = { $search: search };
+        }
+
+        // Options de pagination et tri
+        const skip = (page - 1) * limit;
+        const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+
+        try {
+            const [users, total] = await Promise.all([
+                User.find(query)
+                    .select('-password')
+                    .sort(sort)
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(), // Améliore les performances en retournant des objets JS simples
+                User.countDocuments(query)
+            ]);
+
+            return {
+                users,
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(total / limit),
+                    totalItems: total,
+                    itemsPerPage: limit,
+                    hasNextPage: page < Math.ceil(total / limit),
+                    hasPrevPage: page > 1
+                }
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // UPDATE - Mise à jour d'un utilisateur
+    async update(id, updateData) {
+        try {
+            // Empêcher la modification directe du mot de passe (utiliser une méthode dédiée)
+            const { password, ...allowedUpdates } = updateData;
+
+            const user = await User.findByIdAndUpdate(
+                id,
+                { $set: allowedUpdates },
+                { 
+                    new: true,
+                    runValidators: true
+                }
+            ).select('-password');
+
+            if (!user) {
+                throw new Error('Utilisateur non trouvé');
+            }
+
+            return user;
+        } catch (error) {
+            if (error.name === 'ValidationError') {
+                const messages = Object.values(error.errors).map(err => err.message);
+                throw new Error(`Erreurs de validation: ${messages.join(', ')}`);
+            }
+            if (error.code === 11000) {
+                throw new Error('Un utilisateur avec cet email existe déjà');
+            }
+            throw error;
+        }
+    }
+
+    // Méthode spécifique pour changer le mot de passe
+    async changePassword(id, oldPassword, newPassword) {
+        try {
+            const user = await User.findById(id).select('+password');
+            if (!user) {
+                throw new Error('Utilisateur non trouvé');
+            }
+
+            const isOldPasswordValid = await user.comparePassword(oldPassword);
+            if (!isOldPasswordValid) {
+                throw new Error('Ancien mot de passe incorrect');
+            }
+
+            user.password = newPassword;
+            await user.save();
+
+            return { message: 'Mot de passe mis à jour avec succès' };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // DELETE - Suppression d'un utilisateur
+    async delete(id) {
+        try {
+            const user = await User.findByIdAndDelete(id);
+            if (!user) {
+                throw new Error('Utilisateur non trouvé');
+            }
+            return { message: 'Utilisateur supprimé avec succès' };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // Opérations avancées
+    async getUserStats() {
+        try {
+            const stats = await User.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalUsers: { $sum: 1 },
+                        activeUsers: {
+                            $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] }
+                        },
+                        avgAge: { $avg: '$age' },
+                        oldestUser: { $max: '$age' },
+                        youngestUser: { $min: '$age' }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        totalUsers: 1,
+                        activeUsers: 1,
+                        inactiveUsers: { $subtract: ['$totalUsers', '$activeUsers'] },
+                        avgAge: { $round: ['$avgAge', 1] },
+                        oldestUser: 1,
+                        youngestUser: 1
+                    }
+                }
+            ]);
+
+            return stats[0] || {};
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async getUsersByRole() {
+        try {
+            return await User.aggregate([
+                {
+                    $group: {
+                        _id: '$role',
+                        count: { $sum: 1 },
+                        users: { $push: { name: '$name', email: '$email' } }
+                    }
+                },
+                {
+                    $sort: { count: -1 }
+                }
+            ]);
+        } catch (error) {
+            throw error;
+        }
+    }
+}
+
+export default UserService;
+```
+
+**Intégration avec Express :**
+
+```javascript
+import express from 'express';
+import User from '../models/User.js';
+import UserService from '../services/UserService.js';
+import { body, validationResult } from 'express-validator';
+
+const router = express.Router();
+const userService = new UserService();
+
+// Middleware de validation pour la création d'utilisateur
+const validateUserCreation = [
+    body('name')
+        .trim()
+        .isLength({ min: 2, max: 50 })
+        .withMessage('Le nom doit faire entre 2 et 50 caractères'),
+    body('email')
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Email invalide'),
+    body('password')
+        .isLength({ min: 6 })
+        .withMessage('Le mot de passe doit faire au moins 6 caractères'),
+    body('age')
+        .optional()
+        .isInt({ min: 13, max: 120 })
+        .withMessage('L\'âge doit être entre 13 et 120 ans')
+];
+
+// GET /users - Liste des utilisateurs avec filtres avancés
+router.get('/', async (req, res) => {
+    try {
+        const {
+            page = 1,
+            limit = 10,
+            search,
+            isActive,
+            role,
+            tags,
+            sortBy = 'createdAt',
+            sortOrder = 'desc'
+        } = req.query;
+
+        const options = {
+            page: parseInt(page),
+            limit: Math.min(parseInt(limit), 100), // Limite maximale
+            search,
+            isActive: isActive !== undefined ? isActive === 'true' : undefined,
+            role,
+            tags: tags ? tags.split(',') : undefined,
+            sortBy,
+            sortOrder
+        };
+
+        const result = await userService.find({}, options);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /users - Création d'un utilisateur avec validation
+router.post('/', validateUserCreation, async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ 
+                error: 'Erreurs de validation',
+                details: errors.array()
+            });
+        }
+
+        const user = await userService.create(req.body);
+        res.status(201).json(user);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// GET /users/:id - Récupération d'un utilisateur
+router.get('/:id', async (req, res) => {
+    try {
+        const user = await userService.findById(req.params.id);
+        res.json(user);
+    } catch (error) {
+        const status = error.message.includes('non trouvé') ? 404 : 400;
+        res.status(status).json({ error: error.message });
+    }
+});
+
+// PUT /users/:id - Mise à jour d'un utilisateur
+router.put('/:id', async (req, res) => {
+    try {
+        const user = await userService.update(req.params.id, req.body);
+        res.json(user);
+    } catch (error) {
+        const status = error.message.includes('non trouvé') ? 404 : 400;
+        res.status(status).json({ error: error.message });
+    }
+});
+
+// PATCH /users/:id/password - Changement de mot de passe
+router.patch('/:id/password', async (req, res) => {
+    try {
+        const { oldPassword, newPassword } = req.body;
+        
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ 
+                error: 'Ancien et nouveau mot de passe requis' 
+            });
+        }
+
+        const result = await userService.changePassword(
+            req.params.id, 
+            oldPassword, 
+            newPassword
+        );
+        res.json(result);
+    } catch (error) {
+        const status = error.message.includes('non trouvé') ? 404 : 400;
+        res.status(status).json({ error: error.message });
+    }
+});
+
+// DELETE /users/:id - Suppression d'un utilisateur
+router.delete('/:id', async (req, res) => {
+    try {
+        await userService.delete(req.params.id);
+        res.status(204).send();
+    } catch (error) {
+        const status = error.message.includes('non trouvé') ? 404 : 400;
+        res.status(status).json({ error: error.message });
+    }
+});
+
+// GET /users/stats/overview - Statistiques des utilisateurs
+router.get('/stats/overview', async (req, res) => {
+    try {
+        const stats = await userService.getUserStats();
+        res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /users/stats/by-role - Utilisateurs par rôle
+router.get('/stats/by-role', async (req, res) => {
+    try {
+        const stats = await userService.getUsersByRole();
+        res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+export default router;
+```
+
+**Avantages de Mongoose :**
+
+- **Schémas et validation** : Définition stricte de la structure des données avec validation automatique
+- **Middleware** : Hooks pour exécuter du code avant/après certaines opérations
+- **Populations** : Gestion élégante des références entre documents
+- **Plugins** : Système d'extensions pour ajouter des fonctionnalités
+- **TypeScript** : Support excellent pour le développement typé
+- **Query Builder** : API fluide et intuitive pour construire des requêtes complexes
+
+## 6. Construction d'une API RESTful complète
+
+### 6.1 Architecture MVC avec Express
 
 Le pattern MVC (Modèle-Vue-Contrôleur) sépare les responsabilités de l'application en trois couches distinctes. Dans le contexte d'une API, la vue est généralement remplacée par des réponses JSON, mais la séparation entre modèles et contrôleurs reste cruciale.
 
@@ -818,7 +1778,7 @@ router.delete('/:id', idValidation, UserController.deleteUser);
 module.exports = router;
 ```
 
-### 5.2 Gestion des erreurs et middleware
+### 6.2 Gestion des erreurs et middleware
 
 Une gestion d'erreur robuste est essentielle pour une API de production. Express permet de centraliser la gestion des erreurs avec des middleware spécialisés.
 
@@ -874,7 +1834,7 @@ const notFound = (req, res) => {
 module.exports = { errorHandler, notFound };
 ```
 
-### 5.3 Application complète avec initialisation de la base de données
+### 6.3 Application complète avec initialisation de la base de données
 
 ```javascript
 // app.js
@@ -978,9 +1938,9 @@ if (require.main === module) {
 module.exports = app;
 ```
 
-## 6. Migrations et gestion des évolutions de schéma
+## 7. Migrations et gestion des évolutions de schéma
 
-### 6.1 Introduction aux migrations
+### 7.1 Introduction aux migrations
 
 Les migrations sont des scripts qui permettent de modifier la structure de la base de données de manière versionnée et reproductible. Elles sont essentielles pour maintenir la cohérence entre les environnements de développement, test et production.
 
@@ -1091,9 +2051,9 @@ module.exports = {
 };
 ```
 
-## 7. Tests et débogage
+## 8. Tests et débogage
 
-### 7.1 Tests unitaires avec Jest
+### 8.1 Tests unitaires avec Jest
 
 Les tests sont cruciaux pour maintenir la qualité du code et s'assurer que les modifications n'introduisent pas de régressions.
 
@@ -1232,7 +2192,7 @@ describe('Users API', () => {
 });
 ```
 
-Ce chapitre complet fournit maintenant une base solide pour comprendre et implémenter la gestion des données dans des applications Node.js/Express modernes, avec des exemples concrets couvrant SQLite, MariaDB, et l'utilisation d'ORM comme Sequelize.
+Ce chapitre complet fournit maintenant une base solide pour comprendre et implémenter la gestion des données dans des applications Node.js/Express modernes, avec des exemples concrets couvrant SQLite, MariaDB, MongoDB, et l'utilisation d'ORM comme Sequelize et d'ODM comme Mongoose.
 
 
 
