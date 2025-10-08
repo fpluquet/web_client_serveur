@@ -20,6 +20,7 @@ export default withMermaid(
         { name: "apple-mobile-web-app-status-bar-style", content: "black" },
       ],
     ],
+    ignoreDeadLinks: ["http://localhost:8000"],
 
     // Configuration de Mermaid
     mermaid: {
