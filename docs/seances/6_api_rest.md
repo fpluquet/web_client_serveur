@@ -754,8 +754,183 @@ api-project/
 └── .env
 ```
 
+#### Architecture en couches : Comprendre le rôle de chaque composant
 
+Cette application RESTful suit une **architecture en couches** (layered architecture) qui sépare les responsabilités pour améliorer la maintenabilité, la testabilité et la scalabilité du code. Voici le rôle de chaque couche :
 
+##### 1. **Couche d'entrée - Point d'entrée de l'application (`app.js`)**
+
+```javascript
+// Configuration centralisée des middlewares, routes et serveur
+app.use(helmet());           // Sécurité HTTP
+app.use('/api/auth', authRoutes);  // Routage
+app.use(errorHandler);       // Gestion d'erreurs
+```
+
+**Responsabilités :**
+- Configuration globale de l'application Express
+- Initialisation des middlewares de sécurité
+- Enregistrement des routes principales
+- Démarrage du serveur HTTP
+- Gestion des erreurs au niveau application
+
+##### 2. **Couche de routage (`routes/`)**
+
+```javascript
+// userRoutes.js - Définition des endpoints et de leurs middlewares
+router.get('/profile', authMiddleware, userController.getProfile);
+router.put('/profile', authMiddleware, updateProfileValidation, userController.updateProfile);
+```
+
+**Responsabilités :**
+- Définition des endpoints RESTful (`GET /api/users/profile`)
+- Association des URL aux contrôleurs appropriés
+- Orchestration des middlewares par route (authentification, validation)
+- Respect des conventions REST (méthodes HTTP, nommage des ressources)
+
+##### 3. **Couche middleware (`middleware/`)**
+
+Les middlewares sont des **fonctions interceptrices** qui s'exécutent avant les contrôleurs :
+
+**`auth.js` - Authentification :**
+```javascript
+// Vérifie le token JWT et enrichit req.user
+const authMiddleware = async (req, res, next) => {
+  const token = req.header('Authorization');
+  const decoded = jwt.verify(token, secret);
+  req.user = decoded;  // Enrichit la requête
+  next();              // Passe au middleware suivant
+}
+```
+
+**`validation.js` - Validation des données :**
+```javascript
+// Valide les données d'entrée avec express-validator
+const updateProfileValidation = [
+  body('email').isEmail(),
+  body('username').isLength({ min: 3 })
+];
+```
+
+**Responsabilités :**
+- **Authentification** : Vérification des tokens JWT
+- **Autorisation** : Contrôle des permissions (admin, user)
+- **Validation** : Vérification de la conformité des données d'entrée
+- **Gestion d'erreurs** : Interception et formatage des erreurs
+- **Sécurité** : Rate limiting, CORS, headers sécurisés
+
+##### 4. **Couche contrôleurs (`controllers/`)**
+
+```javascript
+// authController.js - Logique métier des endpoints
+exports.register = async (req, res) => {
+  const errors = validationResult(req);  // Récupère les erreurs de validation
+  const user = new User(req.body);       // Utilise le modèle
+  await user.save();                     // Persiste les données
+  res.json({ user, token });             // Formate la réponse
+};
+```
+
+**Responsabilités :**
+- **Logique métier** : Traitement des requêtes HTTP
+- **Orchestration** : Coordination entre modèles et services
+- **Formatage des réponses** : Structure des réponses JSON
+- **Gestion des erreurs** : Capture et transmission des erreurs métier
+- **Codes de statut HTTP** : Choix approprié des codes de retour
+
+##### 5. **Couche modèles (`models/`)**
+
+```javascript
+// User.js - Représentation et persistance des données
+class User {
+  constructor(userData) {
+    this.id = userData.id || Date.now().toString();
+    this.username = userData.username;
+    // ...
+  }
+  
+  async save() {
+    // Logique de persistance (ici en fichier JSON)
+  }
+  
+  static async findById(id) {
+    // Logique de recherche
+  }
+}
+```
+
+**Responsabilités :**
+- **Représentation des données** : Structure des entités métier
+- **Persistance** : Interface avec le système de stockage (JSON, base de données)
+- **Validation des données** : Règles de validation au niveau modèle
+- **Transformation** : Hashage des mots de passe, formatage des dates
+- **Requêtes** : Méthodes pour CRUD (Create, Read, Update, Delete)
+
+##### 6. **Couche services (`services/`) - Optionnelle**
+
+```javascript
+// authService.js - Logique métier complexe réutilisable
+class AuthService {
+  static generateToken(user) {
+    return jwt.sign({ userId: user.id }, secret);
+  }
+  
+  static async validateCredentials(email, password) {
+    // Logique de validation complexe
+  }
+}
+```
+
+**Responsabilités :**
+- **Logique métier réutilisable** : Fonctions utilisées par plusieurs contrôleurs
+- **Opérations complexes** : Algorithmes métier, calculs
+- **Intégrations externes** : APIs tierces, services de mailing
+- **Abstraction** : Encapsulation de la complexité
+
+##### 7. **Couche utilitaires (`utils/`)**
+
+```javascript
+// logger.js - Fonctions d'aide transversales
+const logger = {
+  info: (message) => console.log(`[INFO] ${message}`),
+  error: (message) => console.error(`[ERROR] ${message}`)
+};
+```
+
+**Responsabilités :**
+- **Fonctions utilitaires** : Helpers réutilisables dans toute l'application
+- **Configuration** : Paramètres globaux, constantes
+- **Formatage** : Fonctions de transformation des données
+- **Logging** : Système de journalisation
+
+#### Flux de données dans l'architecture
+
+```
+1. Requête HTTP → app.js (middlewares globaux)
+2. Routage → routes/ (middlewares spécifiques)
+3. Middleware → middleware/ (auth, validation)
+4. Contrôleur → controllers/ (logique métier)
+5. Modèle → models/ (persistance)
+6. Service → services/ (logique complexe)
+7. Réponse ← formatée par le contrôleur
+```
+
+**Exemple concret : `PUT /api/users/profile`**
+
+1. **app.js** : Applique les middlewares globaux (helmet, cors)
+2. **userRoutes.js** : Route vers `authMiddleware` → `updateProfileValidation` → `userController.updateProfile`
+3. **auth.js** : Vérifie le token JWT, enrichit `req.user`
+4. **validation.js** : Valide les données du body
+5. **userController.js** : Traite la logique métier
+6. **User.js** : Modifie et sauvegarde les données
+7. **Réponse** : Retourne le profil mis à jour
+
+Cette architecture garantit :
+- **Séparation des responsabilités** : Chaque couche a un rôle précis
+- **Maintenabilité** : Modifications localisées dans la couche appropriée
+- **Testabilité** : Chaque couche peut être testée indépendamment
+- **Réutilisabilité** : Middlewares et services réutilisables
+- **Scalabilité** : Ajout facile de nouvelles fonctionnalités
 
 ### 2.2 Implémentation complète avec sécurité et bonnes pratiques
 
@@ -854,7 +1029,7 @@ Dans cette section, nous utilisons un système de stockage basé sur des fichier
 - **Prototypage rapide** : Démarrer rapidement sans configuration de base de données
 - **Environnements simples** : Applications légères ou environnements de développement
 
-Le modèle `User` implémente une interface simple et efficace pour la gestion des données utilisateurs.
+Le modèle `User` implémente une interface simple et efficace pour la gestion des données utilisateurs. Il faudra adapter cette approche pour une base de données réelle (MongoDB, PostgreSQL, etc.) dans une application de production (voir chapitre suivant).
 
 ::: details src/models/User.js
 <!-- @include:start api-project/src/models/User.js -->
@@ -1017,26 +1192,6 @@ module.exports = User;
 <!-- @include:end api-project/src/models/User.js -->
 :::
 
-**Points importants sur le stockage en fichiers JSON :**
-
-**Avantages :**
-- 🚀 **Simplicité** : Pas de configuration de base de données requise
-- 📁 **Transparence** : Les données sont lisibles dans des fichiers JSON
-- 🔄 **Persistance** : Les données survivent au redémarrage du serveur
-- 🛠️ **Développement** : Idéal pour l'apprentissage et le prototypage
-
-**Inconvénients :**
-- 📊 **Performance** : Lecture/écriture complète du fichier à chaque opération
-- 🔒 **Concurrence** : Pas de protection contre les accès simultanés
-- 📈 **Scalabilité** : Inadapté pour de gros volumes de données
-- 🔍 **Requêtes** : Pas de requêtes complexes ou d'indexation
-
-**Structure des fichiers de données :**
-```
-src/
-  data/
-    users.json    # Fichier contenant tous les utilisateurs
-```
 
 #### Contrôleurs et logique métier
 
