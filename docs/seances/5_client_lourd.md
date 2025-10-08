@@ -6,7 +6,7 @@ Nous allons montrer comment créer une application client lourd simple en JavaSc
 
 ## 1. Mise en place d'une SPA basique avec JavaScript vanilla
 
-Créons une application à page unique simple sans framework. Pour cela, nous allons structurer notre projet comme suit :
+Créons une application à page unique simple sans framework. Pour cela, nous allons structurer notre projet comme suit ([📁 Voir sur GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance5/spa-basique)) :
 
 ```
 spa-basique/
@@ -329,7 +329,7 @@ button:hover {
 
 Pour tester cette application :
 
-1. **Naviguez vers le dossier :**
+1. **Naviguez vers le dossier :** ([📁 Voir sur GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance5/spa-basique))
    ```bash
    cd code/seance5/spa-basique
    ```
@@ -351,7 +351,630 @@ Pour tester cette application :
 
 Étendez l'application pour ajouter une nouvelle page "Produits" qui affiche une liste de produits à partir d'un API simulé.
 
-## 2. Client lourd avec API REST Express
+## 2. Stockage côté client
+
+Dans les applications client lourd, il est crucial de comprendre les différentes options de stockage disponibles côté client. Ces mécanismes permettent de persistant des données localement dans le navigateur, d'améliorer les performances et de créer des expériences utilisateur plus fluides.
+
+### 2.1. Vue d'ensemble des options de stockage
+
+Il existe plusieurs mécanismes de stockage côté client, chacun avec ses propres caractéristiques, avantages et cas d'usage :
+
+| Type de stockage | Capacité | Persistance | Portée | API | Cas d'usage |
+|------------------|----------|-------------|---------|-----|-------------|
+| **Cookies** | ~4KB | Configurable (expire) | Domaine/chemin | Document.cookie | Authentification, préférences simples |
+| **localStorage** | ~5-10MB | Permanente | Origine (protocol+host+port) | Synchrone | Préférences utilisateur, cache simple |
+| **sessionStorage** | ~5-10MB | Session (onglet) | Origine + onglet | Synchrone | État temporaire, données de session |
+| **IndexedDB** | ~250MB+ | Permanente | Origine | Asynchrone | Applications hors-ligne, cache complexe |
+| **Cache API** | Variable | Permanente | Origine | Asynchrone (Promises) | Cache de ressources, PWA |
+
+### 2.2. Cookies
+
+Les cookies sont le mécanisme de stockage le plus ancien et sont automatiquement envoyés avec chaque requête HTTP au serveur.
+
+#### Caractéristiques des cookies :
+- **Taille limitée** : 4KB maximum par cookie
+- **Envoi automatique** : Inclus dans toutes les requêtes HTTP
+- **Expiration configurable** : Peuvent expirer à une date donnée ou à la fermeture du navigateur
+- **Sécurité** : Supportent les flags `HttpOnly`, `Secure`, `SameSite`
+
+#### Exemple d'utilisation des cookies :
+
+```javascript
+// Créer un cookie
+document.cookie = "username=john; expires=Thu, 18 Dec 2025 12:00:00 UTC; path=/";
+
+// Créer un cookie de session (expire à la fermeture du navigateur)
+document.cookie = "sessionId=abc123; path=/";
+
+// Lire les cookies
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+}
+
+// Utilisation
+const username = getCookie('username');
+console.log(username); // "john"
+
+// Supprimer un cookie (en le faisant expirer)
+document.cookie = "username=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+```
+
+#### Syntaxe Set-Cookie côté serveur
+
+Du côté serveur, les cookies sont définis via l'en-tête HTTP `Set-Cookie` avec une syntaxe plus riche incluant des attributs de sécurité :
+
+```http
+Set-Cookie: sessionId=abc123; Secure; HttpOnly; SameSite=Strict; Path=/; Max-Age=3600
+```
+
+**Explication des attributs de sécurité :**
+
+| Attribut | Description | Exemple | Sécurité |
+|----------|-------------|---------|----------|
+| **HttpOnly** | Empêche l'accès via JavaScript (`document.cookie`) | `HttpOnly` | ✅ Protection contre XSS |
+| **Secure** | Cookie envoyé uniquement via HTTPS | `Secure` | ✅ Protection contre interception |
+| **SameSite** | Contrôle l'envoi cross-site du cookie | `SameSite=Strict` | ✅ Protection contre CSRF |
+| **Path** | Limite le cookie à un chemin spécifique | `Path=/admin` | ✅ Limitation de portée |
+| **Domain** | Limite le cookie à un domaine | `Domain=.example.com` | ✅ Contrôle de portée |
+| **Max-Age** | Durée de vie en secondes | `Max-Age=3600` | ⏱️ Expiration automatique |
+| **Expires** | Date d'expiration absolue | `Expires=Wed, 09 Jun 2021 10:18:14 GMT` | ⏱️ Expiration à date fixe |
+
+**Valeurs SameSite :**
+- **`Strict`** : Cookie jamais envoyé cross-site (le plus sécurisé)
+- **`Lax`** : Cookie envoyé uniquement sur navigation top-level (par défaut moderne)
+- **`None`** : Cookie toujours envoyé (nécessite `Secure`)
+
+#### Exemple côté serveur (Express.js) :
+
+```javascript
+// Express.js - Configuration sécurisée
+app.post('/login', (req, res) => {
+  // Authentification réussie
+  const sessionId = generateSecureSessionId();
+  
+  // Cookie de session sécurisé
+  res.cookie('sessionId', sessionId, {
+    httpOnly: true,     // Pas d'accès JavaScript
+    secure: true,       // HTTPS uniquement
+    sameSite: 'strict', // Protection CSRF
+    maxAge: 3600000     // 1 heure en milliseconds
+  });
+  
+  // Cookie de préférence (accessible côté client)
+  res.cookie('theme', 'dark', {
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 30 * 24 * 3600000 // 30 jours
+  });
+  
+  res.json({ success: true });
+});
+
+// Lecture côté serveur
+app.get('/profile', (req, res) => {
+  const sessionId = req.cookies.sessionId; // Accessible malgré HttpOnly
+  const theme = req.cookies.theme;
+  
+  if (!sessionId || !validateSession(sessionId)) {
+    return res.status(401).json({ error: 'Session invalide' });
+  }
+  
+  res.json({ user: getUserFromSession(sessionId), theme });
+});
+```
+
+#### Bonnes pratiques de sécurité :
+
+```javascript
+// ✅ Cookie de session sécurisé
+Set-Cookie: sessionId=abc123; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600
+
+// ✅ Cookie de préférence utilisateur
+Set-Cookie: theme=dark; Secure; SameSite=Lax; Path=/; Max-Age=2592000
+
+// ✅ Cookie de tracking (si nécessaire)
+Set-Cookie: analytics=xyz789; Secure; SameSite=None; Path=/; Max-Age=31536000
+
+// ❌ Cookie non sécurisé (à éviter)
+Set-Cookie: sessionId=abc123
+```
+
+**Pourquoi ces attributs sont cruciaux :**
+
+1. **HttpOnly** empêche le vol de session via XSS :
+   ```javascript
+   // ❌ Impossible si HttpOnly est défini
+   const stolenSession = document.cookie.match(/sessionId=([^;]+)/)[1];
+   ```
+
+2. **Secure** empêche l'interception sur HTTP :
+   ```http
+   // ✅ Cookie envoyé uniquement sur HTTPS
+   GET /api/data HTTP/1.1
+   Cookie: sessionId=abc123  // Seulement si HTTPS
+   ```
+
+3. **SameSite=Strict** empêche les attaques CSRF :
+   ```html
+   <!-- ❌ Cookie pas envoyé depuis un autre site -->
+   <img src="https://monsite.com/transfer?amount=1000&to=attacker">
+   ```
+
+### 2.3. localStorage
+
+Le localStorage permet de stocker des données de manière permanente jusqu'à ce qu'elles soient explicitement supprimées.
+
+#### Caractéristiques :
+- **Persistance** : Les données survivent à la fermeture du navigateur
+- **Portée** : Partagé entre tous les onglets du même domaine
+- **Synchrone** : API simple et synchrone
+- **Capacité** : Généralement 5-10MB par origine
+
+#### Exemple d'utilisation :
+
+```javascript
+// Stocker des données simples
+localStorage.setItem('theme', 'dark');
+localStorage.setItem('language', 'fr');
+
+// Stocker des objets (sérialisation JSON nécessaire)
+const userPreferences = {
+  theme: 'dark',
+  notifications: true,
+  autoSave: false
+};
+localStorage.setItem('userPrefs', JSON.stringify(userPreferences));
+
+// Lire des données
+const theme = localStorage.getItem('theme');
+console.log(theme); // "dark"
+
+// Lire et parser un objet
+const prefs = JSON.parse(localStorage.getItem('userPrefs'));
+console.log(prefs.notifications); // true
+
+// Supprimer une entrée
+localStorage.removeItem('theme');
+
+// Vider tout le localStorage
+localStorage.clear();
+
+// Vérifier l'existence d'une clé
+if (localStorage.getItem('theme') !== null) {
+  // La clé existe
+}
+
+// Itérer sur toutes les clés
+for (let i = 0; i < localStorage.length; i++) {
+  const key = localStorage.key(i);
+  const value = localStorage.getItem(key);
+  console.log(`${key}: ${value}`);
+}
+```
+
+#### Exemple pratique : Sauvegarde automatique de formulaire
+
+```javascript
+// Sauvegarde automatique d'un formulaire
+const form = document.getElementById('article-form');
+const titleInput = document.getElementById('title');
+const contentTextarea = document.getElementById('content');
+
+// Sauvegarder à chaque modification
+titleInput.addEventListener('input', () => {
+  localStorage.setItem('draft-title', titleInput.value);
+});
+
+contentTextarea.addEventListener('input', () => {
+  localStorage.setItem('draft-content', contentTextarea.value);
+});
+
+// Restaurer au chargement de la page
+window.addEventListener('load', () => {
+  const savedTitle = localStorage.getItem('draft-title');
+  const savedContent = localStorage.getItem('draft-content');
+  
+  if (savedTitle) titleInput.value = savedTitle;
+  if (savedContent) contentTextarea.value = savedContent;
+});
+
+// Nettoyer après envoi réussi
+form.addEventListener('submit', (e) => {
+  // Après envoi réussi...
+  localStorage.removeItem('draft-title');
+  localStorage.removeItem('draft-content');
+});
+```
+
+### 2.4. sessionStorage
+
+Le sessionStorage fonctionne comme localStorage mais les données ne persistent que durant la session du navigateur (onglet).
+
+#### Caractéristiques :
+- **Durée de vie** : Jusqu'à la fermeture de l'onglet
+- **Portée** : Isolé par onglet
+- **API identique** à localStorage
+
+#### Exemple d'utilisation :
+
+```javascript
+// API identique à localStorage
+sessionStorage.setItem('currentStep', '3');
+sessionStorage.setItem('formData', JSON.stringify(formDataObject));
+
+// Exemple : Wizard multi-étapes
+class FormWizard {
+  constructor() {
+    this.currentStep = parseInt(sessionStorage.getItem('currentStep')) || 1;
+    this.loadSavedData();
+  }
+  
+  saveStep(stepData) {
+    sessionStorage.setItem(`step-${this.currentStep}`, JSON.stringify(stepData));
+    sessionStorage.setItem('currentStep', this.currentStep);
+  }
+  
+  nextStep() {
+    this.currentStep++;
+    sessionStorage.setItem('currentStep', this.currentStep);
+  }
+  
+  loadSavedData() {
+    // Charger les données de toutes les étapes précédentes
+    for (let i = 1; i <= this.currentStep; i++) {
+      const stepData = sessionStorage.getItem(`step-${i}`);
+      if (stepData) {
+        // Restaurer les données de l'étape
+        this.populateStep(i, JSON.parse(stepData));
+      }
+    }
+  }
+}
+```
+
+### 2.5. IndexedDB
+
+IndexedDB est une base de données NoSQL côté client pour stocker de grandes quantités de données structurées.
+
+#### Caractéristiques :
+- **Capacité élevée** : Peut stocker plusieurs centaines de MB
+- **API asynchrone** : Basée sur des événements ou des Promises
+- **Transactions** : Support des transactions ACID
+- **Index** : Permet de créer des index pour des requêtes efficaces
+- **Types de données** : Supporte les objets JavaScript, Blobs, ArrayBuffers
+
+#### Exemple basique d'IndexedDB :
+
+```javascript
+// Ouverture de la base de données
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('TodoAppDB', 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      
+      // Créer un object store (table)
+      if (!db.objectStoreNames.contains('todos')) {
+        const todoStore = db.createObjectStore('todos', { 
+          keyPath: 'id', 
+          autoIncrement: true 
+        });
+        
+        // Créer des index
+        todoStore.createIndex('completed', 'completed', { unique: false });
+        todoStore.createIndex('created', 'created', { unique: false });
+      }
+    };
+  });
+}
+
+// Classe pour gérer les todos avec IndexedDB
+class TodoDB {
+  constructor() {
+    this.db = null;
+  }
+  
+  async init() {
+    this.db = await openDatabase();
+  }
+  
+  async addTodo(todo) {
+    const transaction = this.db.transaction(['todos'], 'readwrite');
+    const store = transaction.objectStore('todos');
+    
+    const todoWithDate = {
+      ...todo,
+      created: new Date(),
+      completed: false
+    };
+    
+    return new Promise((resolve, reject) => {
+      const request = store.add(todoWithDate);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+  
+  async getAllTodos() {
+    const transaction = this.db.transaction(['todos'], 'readonly');
+    const store = transaction.objectStore('todos');
+    
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+  
+  async updateTodo(id, updates) {
+    const transaction = this.db.transaction(['todos'], 'readwrite');
+    const store = transaction.objectStore('todos');
+    
+    // D'abord récupérer l'objet existant
+    const getRequest = store.get(id);
+    
+    return new Promise((resolve, reject) => {
+      getRequest.onsuccess = () => {
+        const todo = getRequest.result;
+        if (todo) {
+          Object.assign(todo, updates);
+          const updateRequest = store.put(todo);
+          updateRequest.onsuccess = () => resolve(todo);
+          updateRequest.onerror = () => reject(updateRequest.error);
+        } else {
+          reject(new Error('Todo not found'));
+        }
+      };
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+  
+  async deleteTodo(id) {
+    const transaction = this.db.transaction(['todos'], 'readwrite');
+    const store = transaction.objectStore('todos');
+    
+    return new Promise((resolve, reject) => {
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+  
+  async getCompletedTodos() {
+    const transaction = this.db.transaction(['todos'], 'readonly');
+    const store = transaction.objectStore('todos');
+    const index = store.index('completed');
+    
+    return new Promise((resolve, reject) => {
+      const request = index.getAll(true); // true = completed
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+}
+
+// Utilisation
+async function example() {
+  const todoDB = new TodoDB();
+  await todoDB.init();
+  
+  // Ajouter des todos
+  await todoDB.addTodo({ text: 'Apprendre IndexedDB', priority: 'high' });
+  await todoDB.addTodo({ text: 'Créer une app todo', priority: 'medium' });
+  
+  // Récupérer tous les todos
+  const todos = await todoDB.getAllTodos();
+  console.log('Tous les todos:', todos);
+  
+  // Marquer comme complété
+  if (todos.length > 0) {
+    await todoDB.updateTodo(todos[0].id, { completed: true });
+  }
+  
+  // Récupérer les todos complétés
+  const completed = await todoDB.getCompletedTodos();
+  console.log('Todos complétés:', completed);
+}
+```
+
+### 2.6. Cache API
+
+L'API Cache est principalement utilisée dans le contexte des Service Workers et des PWA pour mettre en cache des ressources réseau.
+
+#### Exemple d'utilisation :
+
+```javascript
+// Dans un service worker ou une page
+async function cacheResources() {
+  // Ouvrir un cache nommé
+  const cache = await caches.open('app-cache-v1');
+  
+  // Mettre en cache des ressources
+  await cache.addAll([
+    '/',
+    '/css/style.css',
+    '/js/app.js',
+    '/api/data'
+  ]);
+}
+
+// Récupérer depuis le cache
+async function getFromCache(request) {
+  const cache = await caches.open('app-cache-v1');
+  const response = await cache.match(request);
+  return response || fetch(request);
+}
+
+// Stratégie cache-first
+async function cacheFirst(request) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
+  // Si pas en cache, fetch et mettre en cache
+  const response = await fetch(request);
+  const cache = await caches.open('app-cache-v1');
+  cache.put(request, response.clone());
+  return response;
+}
+```
+
+### 2.7. Comparaison et choix du bon mécanisme
+
+#### Quand utiliser chaque type de stockage :
+
+**Cookies** :
+- ✅ Authentification (tokens JWT)
+- ✅ Préférences simples à envoyer au serveur
+- ✅ Suivi des sessions
+- ❌ Stockage de grandes quantités de données
+- ❌ Données qui ne doivent pas être envoyées au serveur
+
+**localStorage** :
+- ✅ Préférences utilisateur (thème, langue)
+- ✅ Cache de données non-critiques
+- ✅ État de l'application entre sessions
+- ✅ Brouillons sauvegardés automatiquement
+- ❌ Données sensibles (pas de chiffrement)
+- ❌ Données partagées entre onglets avec mise à jour temps réel
+
+**sessionStorage** :
+- ✅ État temporaire d'un formulaire multi-étapes
+- ✅ Données de navigation dans une session
+- ✅ Cache temporaire pour une session
+- ❌ Données qui doivent persister après fermeture
+
+**IndexedDB** :
+- ✅ Applications hors-ligne complexes
+- ✅ Stockage de grandes quantités de données structurées
+- ✅ Cache sophistiqué avec requêtes
+- ✅ Historique local détaillé
+- ❌ Données simples (overkill)
+- ❌ Quand vous avez besoin d'une API synchrone simple
+
+#### Exemple d'architecture hybride :
+
+```javascript
+class DataManager {
+  constructor() {
+    this.initIndexedDB();
+  }
+  
+  // Préférences utilisateur -> localStorage
+  saveUserPreference(key, value) {
+    localStorage.setItem(`pref_${key}`, JSON.stringify(value));
+  }
+  
+  getUserPreference(key, defaultValue = null) {
+    const value = localStorage.getItem(`pref_${key}`);
+    return value ? JSON.parse(value) : defaultValue;
+  }
+  
+  // Session temporaire -> sessionStorage
+  saveSessionData(key, value) {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  }
+  
+  getSessionData(key) {
+    const value = sessionStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  }
+  
+  // Données complexes -> IndexedDB
+  async saveComplexData(storeName, data) {
+    // Utiliser IndexedDB pour des données complexes
+    const db = await this.getDB();
+    const transaction = db.transaction([storeName], 'readwrite');
+    const store = transaction.objectStore(storeName);
+    return store.add(data);
+  }
+  
+  // Authentication token -> Cookie sécurisé
+  setAuthToken(token) {
+    document.cookie = `authToken=${token}; secure; httpOnly; sameSite=strict; path=/`;
+  }
+}
+```
+
+### 2.8. Gestion des quotas et erreurs
+
+Il est important de gérer les limitations de stockage :
+
+```javascript
+// Vérifier l'espace disponible (API expérimentale)
+if ('storage' in navigator && 'estimate' in navigator.storage) {
+  navigator.storage.estimate().then(estimate => {
+    console.log(`Utilisé: ${estimate.usage} bytes`);
+    console.log(`Disponible: ${estimate.quota} bytes`);
+    console.log(`Pourcentage utilisé: ${(estimate.usage / estimate.quota * 100).toFixed(2)}%`);
+  });
+}
+
+// Gestion des erreurs de stockage
+function safeLocalStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    if (error.name === 'QuotaExceededError') {
+      console.warn('Quota de stockage dépassé');
+      // Nettoyer des données anciennes ou non-critiques
+      cleanupOldData();
+      return false;
+    }
+    console.error('Erreur de stockage:', error);
+    return false;
+  }
+}
+
+function cleanupOldData() {
+  // Supprimer les données anciennes ou non-critiques
+  const keysToCheck = Object.keys(localStorage);
+  keysToCheck.forEach(key => {
+    if (key.startsWith('cache_') || key.startsWith('temp_')) {
+      localStorage.removeItem(key);
+    }
+  });
+}
+```
+
+Cette section vous donne maintenant une compréhension complète des différents mécanismes de stockage côté client. Dans la prochaine section, nous verrons comment intégrer ces concepts dans une vraie application client lourd.
+
+### 💻 Démonstration Interactive
+
+Une démonstration complète et interactive est disponible pour tester tous ces concepts :
+
+**📁 Emplacement :** `code/seance5/demo-stockage/` ([📁 Voir sur GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance5/demo-stockage))
+
+**🚀 Pour lancer la démonstration :**
+```bash
+cd code/seance5/demo-stockage
+python -m http.server 8000
+# Puis ouvrir http://localhost:8000
+```
+
+Cette démonstration vous permet de :
+- ✅ Tester tous les types de stockage côté client
+- ✅ Comparer leur comportement en temps réel
+- ✅ Voir des exemples pratiques (sauvegarde automatique)
+- ✅ Comprendre les limitations et quotas
+- ✅ Expérimenter avec la persistance et la portée
+
+**💡 Expériences recommandées :**
+1. Sauvegardez des données puis rafraîchissez la page
+2. Ouvrez plusieurs onglets pour tester la portée
+3. Fermez/rouvrez le navigateur pour tester la persistance
+4. Utilisez la sauvegarde automatique avec de longs textes
+
+## 3. Client lourd avec API REST Express
 
 Pour illustrer un vrai client lourd, créons une application todolist simple qui communique avec un serveur Express via une API REST. Cette architecture sépare clairement le frontend (client lourd) du backend (API).
 
@@ -370,6 +993,8 @@ todolist-client-lourd/
 │       └── app.js
 └── README.md
 ```
+
+[📁 **Voir le projet complet sur GitHub**](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance5/todolist-client-lourd)
 
 ### Côté serveur (API REST avec Express)
 
@@ -982,7 +1607,7 @@ button[type="submit"]:hover {
 
 ### Instructions de démarrage
 
-1. **Installation des dépendances du serveur :**
+1. **Installation des dépendances du serveur :** ([📁 Voir sur GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance5/todolist-client-lourd))
    ```bash
    cd code/seance5/todolist-client-lourd/server
    npm install

@@ -120,7 +120,7 @@ function processMarkdownFile(markdownPath) {
   const fileToCodeMap = {
     '5_client_lourd': 'seance5',
     '3_nodejs': 'seance3',
-    '1_client_serveur_http': 'seance1'
+    '6_api_rest': 'seance6'
     // Ajoutez d'autres mappings selon vos besoins
   };
   

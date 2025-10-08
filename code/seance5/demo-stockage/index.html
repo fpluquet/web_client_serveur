@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Démonstration - Stockage côté Client</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .demo-section {
+      margin-bottom: 40px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .demo-section h2 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button.danger {
+      background: #dc3545;
+    }
+    button.danger:hover {
+      background: #c82333;
+    }
+    .output {
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 10px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .storage-info {
+      background: #d1ecf1;
+      border: 1px solid #bee5eb;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .auto-save-status {
+      color: #28a745;
+      font-style: italic;
+    }
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗃️ Démonstration des Types de Stockage Côté Client</h1>
+    <p>Cette page vous permet de tester et comprendre les différents mécanismes de stockage disponibles dans le navigateur.</p>
+    
+    <div class="grid">
+      <!-- localStorage Demo -->
+      <div class="demo-section">
+        <h2>📦 localStorage</h2>
+        <p><strong>Persistance :</strong> Permanente jusqu'à suppression manuelle</p>
+        <p><strong>Portée :</strong> Tous les onglets du même domaine</p>
+        
+        <div class="form-group">
+          <label for="ls-key">Clé :</label>
+          <input type="text" id="ls-key" value="ma-preference" placeholder="Nom de la clé">
+        </div>
+        <div class="form-group">
+          <label for="ls-value">Valeur :</label>
+          <input type="text" id="ls-value" placeholder="Valeur à stocker">
+        </div>
+        
+        <button onclick="localStorage_save()">💾 Sauvegarder</button>
+        <button onclick="localStorage_load()">📖 Charger</button>
+        <button onclick="localStorage_delete()" class="danger">🗑️ Supprimer</button>
+        <button onclick="localStorage_listAll()">📋 Lister tout</button>
+        <button onclick="localStorage_clear()" class="danger">🧹 Tout vider</button>
+        
+        <div class="output" id="ls-output">Résultat des opérations localStorage...</div>
+      </div>
+
+      <!-- sessionStorage Demo -->
+      <div class="demo-section">
+        <h2>🏷️ sessionStorage</h2>
+        <p><strong>Persistance :</strong> Jusqu'à fermeture de l'onglet</p>
+        <p><strong>Portée :</strong> Onglet actuel uniquement</p>
+        
+        <div class="form-group">
+          <label for="ss-key">Clé :</label>
+          <input type="text" id="ss-key" value="session-data" placeholder="Nom de la clé">
+        </div>
+        <div class="form-group">
+          <label for="ss-value">Valeur :</label>
+          <input type="text" id="ss-value" placeholder="Valeur à stocker">
+        </div>
+        
+        <button onclick="sessionStorage_save()">💾 Sauvegarder</button>
+        <button onclick="sessionStorage_load()">📖 Charger</button>
+        <button onclick="sessionStorage_delete()" class="danger">🗑️ Supprimer</button>
+        <button onclick="sessionStorage_listAll()">📋 Lister tout</button>
+        <button onclick="sessionStorage_clear()" class="danger">🧹 Tout vider</button>
+        
+        <div class="output" id="ss-output">Résultat des opérations sessionStorage...</div>
+      </div>
+    </div>
+
+    <!-- Cookies Demo -->
+    <div class="demo-section">
+      <h2>🍪 Cookies</h2>
+      <p><strong>Persistance :</strong> Configurable (session ou expiration)</p>
+      <p><strong>Envoi :</strong> Automatiquement envoyés avec chaque requête HTTP</p>
+      
+      <div class="grid">
+        <div>
+          <div class="form-group">
+            <label for="cookie-name">Nom :</label>
+            <input type="text" id="cookie-name" value="mon-cookie" placeholder="Nom du cookie">
+          </div>
+          <div class="form-group">
+            <label for="cookie-value">Valeur :</label>
+            <input type="text" id="cookie-value" placeholder="Valeur du cookie">
+          </div>
+          <div class="form-group">
+            <label for="cookie-expiry">Expiration :</label>
+            <select id="cookie-expiry">
+              <option value="session">Session (fermeture navigateur)</option>
+              <option value="1hour">1 heure</option>
+              <option value="1day">1 jour</option>
+              <option value="1week">1 semaine</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <button onclick="cookie_save()">💾 Créer Cookie</button>
+          <button onclick="cookie_load()">📖 Lire Cookie</button>
+          <button onclick="cookie_delete()" class="danger">🗑️ Supprimer Cookie</button>
+          <button onclick="cookie_listAll()">📋 Lister tous les Cookies</button>
+          
+          <div class="output" id="cookie-output">Résultat des opérations cookies...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto-save Demo -->
+    <div class="demo-section">
+      <h2>✍️ Démonstration : Sauvegarde Automatique</h2>
+      <p>Ce formulaire utilise localStorage pour sauvegarder automatiquement vos modifications.</p>
+      
+      <div class="form-group">
+        <label for="auto-title">Titre de l'article :</label>
+        <input type="text" id="auto-title" placeholder="Tapez votre titre...">
+        <div class="auto-save-status" id="title-status"></div>
+      </div>
+      
+      <div class="form-group">
+        <label for="auto-content">Contenu :</label>
+        <textarea id="auto-content" rows="6" placeholder="Commencez à taper votre article..."></textarea>
+        <div class="auto-save-status" id="content-status"></div>
+      </div>
+      
+      <button onclick="clearAutoSave()" class="danger">🗑️ Effacer le brouillon</button>
+      <button onclick="publishArticle()">📤 Publier l'article</button>
+      
+      <div class="storage-info">
+        <strong>💡 Astuce :</strong> Tapez du texte, rafraîchissez la page (F5) ou fermez/rouvrez l'onglet. 
+        Votre texte sera automatiquement restauré grâce à localStorage !
+      </div>
+    </div>
+
+    <!-- Storage Comparison -->
+    <div class="demo-section">
+      <h2>📊 Comparaison en Temps Réel</h2>
+      <p>Testez le comportement de chaque type de stockage :</p>
+      
+      <div class="form-group">
+        <label for="test-data">Données de test :</label>
+        <input type="text" id="test-data" value="Test de persistance" placeholder="Données à tester">
+      </div>
+      
+      <button onclick="saveToAll()">💾 Sauvegarder dans TOUS les types</button>
+      <button onclick="loadFromAll()">📖 Charger depuis TOUS les types</button>
+      <button onclick="clearAll()" class="danger">🧹 Tout supprimer</button>
+      
+      <div class="output" id="comparison-output">Cliquez sur les boutons pour voir les différences...</div>
+      
+      <div class="storage-info">
+        <strong>🧪 Expérience :</strong>
+        <ol>
+          <li>Sauvegardez des données dans tous les types</li>
+          <li>Rafraîchissez la page (F5) → localStorage et cookies persistent</li>
+          <li>Ouvrez un nouvel onglet vers cette page → seuls localStorage et cookies sont partagés</li>
+          <li>Fermez tous les onglets et rouvrez → seuls localStorage et cookies (non-session) persistent</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Storage Info -->
+    <div class="demo-section">
+      <h2>📈 Informations sur le Stockage</h2>
+      <button onclick="getStorageInfo()">🔍 Analyser le stockage</button>
+      <div class="output" id="storage-info-output">Cliquez pour obtenir des informations sur le stockage...</div>
+    </div>
+  </div>
+
+  <script>
+    // ======================
+    // localStorage Functions
+    // ======================
+    function localStorage_save() {
+      const key = document.getElementById('ls-key').value;
+      const value = document.getElementById('ls-value').value;
+      
+      if (!key || !value) {
+        output('ls-output', '❌ Veuillez remplir la clé et la valeur');
+        return;
+      }
+      
+      try {
+        localStorage.setItem(key, value);
+        output('ls-output', `✅ Sauvegardé: "${key}" = "${value}"`);
+      } catch (error) {
+        output('ls-output', `❌ Erreur: ${error.message}`);
+      }
+    }
+
+    function localStorage_load() {
+      const key = document.getElementById('ls-key').value;
+      
+      if (!key) {
+        output('ls-output', '❌ Veuillez spécifier une clé');
+        return;
+      }
+      
+      const value = localStorage.getItem(key);
+      if (value !== null) {
+        document.getElementById('ls-value').value = value;
+        output('ls-output', `✅ Chargé: "${key}" = "${value}"`);
+      } else {
+        output('ls-output', `❌ Clé "${key}" non trouvée`);
+      }
+    }
+
+    function localStorage_delete() {
+      const key = document.getElementById('ls-key').value;
+      
+      if (!key) {
+        output('ls-output', '❌ Veuillez spécifier une clé');
+        return;
+      }
+      
+      localStorage.removeItem(key);
+      output('ls-output', `✅ Supprimé: "${key}"`);
+    }
+
+    function localStorage_listAll() {
+      const items = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        items.push(`"${key}": "${value}"`);
+      }
+      
+      if (items.length === 0) {
+        output('ls-output', '📭 localStorage est vide');
+      } else {
+        output('ls-output', `📋 localStorage contient ${items.length} élément(s):\n${items.join('\n')}`);
+      }
+    }
+
+    function localStorage_clear() {
+      const count = localStorage.length;
+      localStorage.clear();
+      output('ls-output', `🧹 localStorage vidé (${count} éléments supprimés)`);
+    }
+
+    // =========================
+    // sessionStorage Functions
+    // =========================
+    function sessionStorage_save() {
+      const key = document.getElementById('ss-key').value;
+      const value = document.getElementById('ss-value').value;
+      
+      if (!key || !value) {
+        output('ss-output', '❌ Veuillez remplir la clé et la valeur');
+        return;
+      }
+      
+      try {
+        sessionStorage.setItem(key, value);
+        output('ss-output', `✅ Sauvegardé: "${key}" = "${value}"`);
+      } catch (error) {
+        output('ss-output', `❌ Erreur: ${error.message}`);
+      }
+    }
+
+    function sessionStorage_load() {
+      const key = document.getElementById('ss-key').value;
+      
+      if (!key) {
+        output('ss-output', '❌ Veuillez spécifier une clé');
+        return;
+      }
+      
+      const value = sessionStorage.getItem(key);
+      if (value !== null) {
+        document.getElementById('ss-value').value = value;
+        output('ss-output', `✅ Chargé: "${key}" = "${value}"`);
+      } else {
+        output('ss-output', `❌ Clé "${key}" non trouvée`);
+      }
+    }
+
+    function sessionStorage_delete() {
+      const key = document.getElementById('ss-key').value;
+      
+      if (!key) {
+        output('ss-output', '❌ Veuillez spécifier une clé');
+        return;
+      }
+      
+      sessionStorage.removeItem(key);
+      output('ss-output', `✅ Supprimé: "${key}"`);
+    }
+
+    function sessionStorage_listAll() {
+      const items = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        const value = sessionStorage.getItem(key);
+        items.push(`"${key}": "${value}"`);
+      }
+      
+      if (items.length === 0) {
+        output('ss-output', '📭 sessionStorage est vide');
+      } else {
+        output('ss-output', `📋 sessionStorage contient ${items.length} élément(s):\n${items.join('\n')}`);
+      }
+    }
+
+    function sessionStorage_clear() {
+      const count = sessionStorage.length;
+      sessionStorage.clear();
+      output('ss-output', `🧹 sessionStorage vidé (${count} éléments supprimés)`);
+    }
+
+    // ===================
+    // Cookies Functions
+    // ===================
+    function cookie_save() {
+      const name = document.getElementById('cookie-name').value;
+      const value = document.getElementById('cookie-value').value;
+      const expiry = document.getElementById('cookie-expiry').value;
+      
+      if (!name || !value) {
+        output('cookie-output', '❌ Veuillez remplir le nom et la valeur');
+        return;
+      }
+      
+      let expiryString = '';
+      if (expiry !== 'session') {
+        const expiryDate = new Date();
+        switch (expiry) {
+          case '1hour':
+            expiryDate.setHours(expiryDate.getHours() + 1);
+            break;
+          case '1day':
+            expiryDate.setDate(expiryDate.getDate() + 1);
+            break;
+          case '1week':
+            expiryDate.setDate(expiryDate.getDate() + 7);
+            break;
+        }
+        expiryString = `; expires=${expiryDate.toUTCString()}`;
+      }
+      
+      document.cookie = `${name}=${value}${expiryString}; path=/`;
+      output('cookie-output', `✅ Cookie créé: "${name}" = "${value}" (${expiry === 'session' ? 'session' : expiry})`);
+    }
+
+    function cookie_load() {
+      const name = document.getElementById('cookie-name').value;
+      
+      if (!name) {
+        output('cookie-output', '❌ Veuillez spécifier un nom de cookie');
+        return;
+      }
+      
+      const value = getCookie(name);
+      if (value !== null) {
+        document.getElementById('cookie-value').value = value;
+        output('cookie-output', `✅ Cookie lu: "${name}" = "${value}"`);
+      } else {
+        output('cookie-output', `❌ Cookie "${name}" non trouvé`);
+      }
+    }
+
+    function cookie_delete() {
+      const name = document.getElementById('cookie-name').value;
+      
+      if (!name) {
+        output('cookie-output', '❌ Veuillez spécifier un nom de cookie');
+        return;
+      }
+      
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`;
+      output('cookie-output', `✅ Cookie supprimé: "${name}"`);
+    }
+
+    function cookie_listAll() {
+      const cookies = document.cookie.split(';');
+      const cookieList = [];
+      
+      cookies.forEach(cookie => {
+        const trimmed = cookie.trim();
+        if (trimmed) {
+          const [name, value] = trimmed.split('=');
+          cookieList.push(`"${name}": "${value || ''}"`);
+        }
+      });
+      
+      if (cookieList.length === 0) {
+        output('cookie-output', '📭 Aucun cookie trouvé');
+      } else {
+        output('cookie-output', `🍪 ${cookieList.length} cookie(s) trouvé(s):\n${cookieList.join('\n')}`);
+      }
+    }
+
+    // ======================
+    // Auto-save Functions
+    // ======================
+    function initAutoSave() {
+      const titleInput = document.getElementById('auto-title');
+      const contentInput = document.getElementById('auto-content');
+      
+      // Restaurer les données sauvegardées
+      const savedTitle = localStorage.getItem('draft-title');
+      const savedContent = localStorage.getItem('draft-content');
+      
+      if (savedTitle) {
+        titleInput.value = savedTitle;
+        showStatus('title-status', '✅ Titre restauré depuis le localStorage');
+      }
+      
+      if (savedContent) {
+        contentInput.value = savedContent;
+        showStatus('content-status', '✅ Contenu restauré depuis le localStorage');
+      }
+      
+      // Sauvegarder automatiquement
+      titleInput.addEventListener('input', () => {
+        localStorage.setItem('draft-title', titleInput.value);
+        showStatus('title-status', '💾 Titre sauvegardé automatiquement');
+      });
+      
+      contentInput.addEventListener('input', () => {
+        localStorage.setItem('draft-content', contentInput.value);
+        showStatus('content-status', '💾 Contenu sauvegardé automatiquement');
+      });
+    }
+
+    function clearAutoSave() {
+      localStorage.removeItem('draft-title');
+      localStorage.removeItem('draft-content');
+      document.getElementById('auto-title').value = '';
+      document.getElementById('auto-content').value = '';
+      showStatus('title-status', '🗑️ Brouillon supprimé');
+      showStatus('content-status', '🗑️ Brouillon supprimé');
+    }
+
+    function publishArticle() {
+      const title = document.getElementById('auto-title').value;
+      const content = document.getElementById('auto-content').value;
+      
+      if (!title || !content) {
+        alert('❌ Veuillez remplir le titre et le contenu');
+        return;
+      }
+      
+      // Simuler la publication
+      alert(`📤 Article "${title}" publié avec succès!`);
+      
+      // Nettoyer les brouillons après publication
+      clearAutoSave();
+    }
+
+    // =======================
+    // Comparison Functions
+    // =======================
+    function saveToAll() {
+      const data = document.getElementById('test-data').value;
+      const timestamp = new Date().toLocaleTimeString();
+      const testValue = `${data} (${timestamp})`;
+      
+      // localStorage
+      localStorage.setItem('test-comparison', testValue);
+      
+      // sessionStorage
+      sessionStorage.setItem('test-comparison', testValue);
+      
+      // Cookie
+      document.cookie = `test-comparison=${testValue}; path=/`;
+      
+      output('comparison-output', `✅ Données sauvegardées dans tous les types:\n"${testValue}"`);
+    }
+
+    function loadFromAll() {
+      const results = [];
+      
+      // localStorage
+      const lsValue = localStorage.getItem('test-comparison');
+      results.push(`📦 localStorage: ${lsValue || 'non trouvé'}`);
+      
+      // sessionStorage
+      const ssValue = sessionStorage.getItem('test-comparison');
+      results.push(`🏷️ sessionStorage: ${ssValue || 'non trouvé'}`);
+      
+      // Cookie
+      const cookieValue = getCookie('test-comparison');
+      results.push(`🍪 Cookie: ${cookieValue || 'non trouvé'}`);
+      
+      output('comparison-output', results.join('\n'));
+    }
+
+    function clearAll() {
+      localStorage.removeItem('test-comparison');
+      sessionStorage.removeItem('test-comparison');
+      document.cookie = 'test-comparison=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+      
+      output('comparison-output', '🧹 Toutes les données de test supprimées');
+    }
+
+    // ====================
+    // Storage Info
+    // ====================
+    async function getStorageInfo() {
+      let info = [];
+      
+      // Compter les éléments
+      info.push(`📦 localStorage: ${localStorage.length} élément(s)`);
+      info.push(`🏷️ sessionStorage: ${sessionStorage.length} élément(s)`);
+      
+      // Cookies
+      const cookieCount = document.cookie ? document.cookie.split(';').length : 0;
+      info.push(`🍪 Cookies: ${cookieCount} élément(s)`);
+      
+      // Estimation de l'usage du stockage (API expérimentale)
+      if ('storage' in navigator && 'estimate' in navigator.storage) {
+        try {
+          const estimate = await navigator.storage.estimate();
+          const usedMB = (estimate.usage / 1024 / 1024).toFixed(2);
+          const quotaMB = (estimate.quota / 1024 / 1024).toFixed(2);
+          const percentage = ((estimate.usage / estimate.quota) * 100).toFixed(2);
+          
+          info.push('');
+          info.push('📊 Estimation de l\'usage du stockage:');
+          info.push(`   Utilisé: ${usedMB} MB`);
+          info.push(`   Quota: ${quotaMB} MB`);
+          info.push(`   Pourcentage: ${percentage}%`);
+        } catch (error) {
+          info.push('');
+          info.push('⚠️ Estimation du stockage non disponible');
+        }
+      }
+      
+      // Support des APIs
+      info.push('');
+      info.push('🔧 Support des APIs:');
+      info.push(`   localStorage: ${typeof(Storage) !== 'undefined' ? '✅' : '❌'}`);
+      info.push(`   sessionStorage: ${typeof(Storage) !== 'undefined' ? '✅' : '❌'}`);
+      info.push(`   IndexedDB: ${!!window.indexedDB ? '✅' : '❌'}`);
+      info.push(`   Cache API: ${!!window.caches ? '✅' : '❌'}`);
+      
+      output('storage-info-output', info.join('\n'));
+    }
+
+    // ===================
+    // Utility Functions
+    // ===================
+    function output(elementId, text) {
+      document.getElementById(elementId).textContent = text;
+    }
+
+    function showStatus(elementId, text) {
+      const element = document.getElementById(elementId);
+      element.textContent = text;
+      // Effacer le message après 3 secondes
+      setTimeout(() => {
+        element.textContent = '';
+      }, 3000);
+    }
+
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+      }
+      return null;
+    }
+
+    // ===================
+    // Page Initialization
+    // ===================
+    document.addEventListener('DOMContentLoaded', () => {
+      initAutoSave();
+      
+      // Afficher un message de bienvenue
+      const hasVisited = localStorage.getItem('demo-visited');
+      if (!hasVisited) {
+        localStorage.setItem('demo-visited', 'true');
+        localStorage.setItem('first-visit', new Date().toLocaleString());
+        alert('👋 Bienvenue ! Cette page va vous aider à comprendre le stockage côté client.\n\nCommencez par la section localStorage, puis explorez les autres types de stockage.');
+      } else {
+        const firstVisit = localStorage.getItem('first-visit');
+        console.log(`🔄 Visite de retour ! Première visite: ${firstVisit}`);
+      }
+    });
+  </script>
+</body>
+</html>

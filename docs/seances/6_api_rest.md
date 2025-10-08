@@ -16,7 +16,7 @@ L'interface uniforme est le principe central de REST. Elle stipule que toutes le
 - **Identification des ressources** : Chaque ressource doit être uniquement identifiable par une URI (Uniform Resource Identifier). Par exemple, `/api/users/123` identifie l'utilisateur avec l'ID 123.
 - **Manipulation des ressources par représentations** : Les clients interagissent avec les ressources via leurs représentations (JSON, XML, HTML).
 - **Messages auto-descriptifs** : Chaque message doit contenir suffisamment d'informations pour être traité (headers HTTP, codes de statut).
-- **HATEOAS** (Hypermedia as the Engine of Application State) : Les réponses incluent des liens vers d'autres ressources liées.
+- **HATEOAS** (Hypermedia as the Engine of Application State) : Les réponses incluent des liens vers d'autres ressources liées, permettant la découverte dynamique des actions possibles.
 
 **2. Sans état (Stateless)**
 Chaque requête du client vers le serveur doit contenir toutes les informations nécessaires pour traiter la requête. Le serveur ne doit stocker aucun contexte client entre les requêtes. Cela signifie que :
@@ -39,6 +39,44 @@ L'architecture peut être composée de couches hiérarchiques où chaque composa
 
 **6. Code à la demande (Code on Demand) - Optionnel**
 Cette contrainte optionnelle permet au serveur d'étendre temporairement les fonctionnalités du client en transmettant du code exécutable (JavaScript, par exemple).
+
+#### Focus sur HATEOAS : découverte dynamique des actions
+
+HATEOAS (Hypermedia as the Engine of Application State) est souvent la contrainte REST la moins comprise et la moins implémentée. Elle mérite une explication détaillée.
+
+**Le principe :** Un client interagit avec une API REST **uniquement via les liens hypermedia fournis dynamiquement par le serveur** dans les réponses. Le client n'a pas besoin de connaître à l'avance la structure complète de l'API — il découvre les actions possibles à travers les liens contenus dans les réponses du serveur.
+
+**Sans HATEOAS :**
+Le client sait qu'il doit faire :
+```
+GET /users/1
+GET /users/1/orders
+```
+Ces URL sont codées en dur dans le client → **fort couplage**.
+
+**Avec HATEOAS :**
+Réponse du serveur à `GET /users/1` :
+```json
+{
+  "id": 1,
+  "name": "Alice",
+  "email": "alice@example.com",
+  "_links": {
+    "self": { "href": "/users/1" },
+    "orders": { "href": "/users/1/orders" },
+    "update": { "href": "/users/1", "method": "PUT" }
+  }
+}
+```
+
+Le client lit les liens disponibles (`_links`) et sait quelles actions sont possibles :
+* consulter les commandes,
+* mettre à jour le profil, etc.
+→ **Il n'a pas besoin de connaître les routes à l'avance.**
+
+**En pratique :**
+* HATEOAS rend les **API plus évolutives** et **moins dépendantes du client**.
+* Mais il est **rarement implémenté complètement** dans les API REST modernes (souvent jugé trop verbeux ou inutile si la documentation est claire).
 
 #### Bonnes pratiques pour les APIs RESTful
 
@@ -560,9 +598,177 @@ api-project/
 └── .env
 ```
 
+#### Exemple simple d'API RESTful
+
+Avant de plonger dans l'implémentation complète, voici un exemple simple d'API RESTful basique pour comprendre les concepts fondamentaux :
+
+**api-simple/server.js**
+<!-- @include:start api-simple/server.js -->
+```javascript
+const express = require('express');
+const app = express();
+
+// Middleware pour parser JSON
+app.use(express.json());
+
+// Données en mémoire (en réalité, on utiliserait une base de données)
+let users = [
+  { id: 1, name: 'Alice', email: 'alice@example.com' },
+  { id: 2, name: 'Bob', email: 'bob@example.com' }
+];
+
+let nextId = 3;
+
+// Route GET - Récupérer tous les utilisateurs
+app.get('/api/users', (req, res) => {
+  res.json({
+    success: true,
+    data: users
+  });
+});
+
+// Route GET - Récupérer un utilisateur par ID
+app.get('/api/users/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const user = users.find(u => u.id === id);
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'Utilisateur non trouvé'
+    });
+  }
+  
+  res.json({
+    success: true,
+    data: user
+  });
+});
+
+// Route POST - Créer un nouvel utilisateur
+app.post('/api/users', (req, res) => {
+  const { name, email } = req.body;
+  
+  // Validation simple
+  if (!name || !email) {
+    return res.status(400).json({
+      success: false,
+      message: 'Le nom et l\'email sont requis'
+    });
+  }
+  
+  const newUser = {
+    id: nextId++,
+    name,
+    email
+  };
+  
+  users.push(newUser);
+  
+  res.status(201).json({
+    success: true,
+    data: newUser
+  });
+});
+
+// Route PUT - Modifier un utilisateur
+app.put('/api/users/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const userIndex = users.findIndex(u => u.id === id);
+  
+  if (userIndex === -1) {
+    return res.status(404).json({
+      success: false,
+      message: 'Utilisateur non trouvé'
+    });
+  }
+  
+  const { name, email } = req.body;
+  
+  if (!name || !email) {
+    return res.status(400).json({
+      success: false,
+      message: 'Le nom et l\'email sont requis'
+    });
+  }
+  
+  users[userIndex] = { id, name, email };
+  
+  res.json({
+    success: true,
+    data: users[userIndex]
+  });
+});
+
+// Route DELETE - Supprimer un utilisateur
+app.delete('/api/users/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const userIndex = users.findIndex(u => u.id === id);
+  
+  if (userIndex === -1) {
+    return res.status(404).json({
+      success: false,
+      message: 'Utilisateur non trouvé'
+    });
+  }
+  
+  const deletedUser = users.splice(userIndex, 1)[0];
+  
+  res.json({
+    success: true,
+    message: 'Utilisateur supprimé',
+    data: deletedUser
+  });
+});
+
+// Route par défaut
+app.get('/', (req, res) => {
+  res.json({
+    message: 'API Simple - Gestion d\'utilisateurs',
+    endpoints: {
+      'GET /api/users': 'Récupérer tous les utilisateurs',
+      'GET /api/users/:id': 'Récupérer un utilisateur',
+      'POST /api/users': 'Créer un utilisateur',
+      'PUT /api/users/:id': 'Modifier un utilisateur',
+      'DELETE /api/users/:id': 'Supprimer un utilisateur'
+    }
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur le port ${PORT}`);
+  console.log(`API disponible sur http://localhost:${PORT}`);
+});
+```
+<!-- @include:end api-simple/server.js -->
+
+**api-simple/package.json**
+<!-- @include:start api-simple/package.json -->
+```json
+{
+  "name": "api-simple",
+  "version": "1.0.0",
+  "description": "API simple pour débuter avec Express",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
+```
+<!-- @include:end api-simple/package.json -->
+
 #### Configuration de base de l'application
 
 **package.json**
+<!-- @include:start api-project/package.json -->
 ```json
 {
   "name": "api-restful-nodejs",
@@ -592,580 +798,707 @@ api-project/
   }
 }
 ```
+<!-- @include:end api-project/package.json -->
 
 **Configuration principale (src/app.js)**
+<!-- @include:start api-project/src/app.js -->
 ```javascript
-import express from 'express';
-import mongoose from 'mongoose';
-import helmet from 'helmet';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import 'dotenv/config';
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+require('dotenv').config();
 
-// Import des routes
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
-
-// Import des middlewares
-import errorHandler from './middleware/errorHandler.js';
-import { notFoundHandler } from './middleware/errorHandler.js';
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-// Middlewares de sécurité
-app.use(helmet());
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-  credentials: true
-}));
+// Configuration de la base de données
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/api-restful', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+});
 
-// Rate limiting
+// Middleware de sécurité
+app.use(helmet());
+app.use(cors());
+
+// Limitation du taux de requêtes
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limite chaque IP à 100 requêtes par windowMs
 });
-app.use('/api', limiter);
+app.use(limiter);
 
-// Parsing des requêtes
+// Middleware pour parser JSON
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-// Connexion à MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => {
-  console.log('✅ Connexion à MongoDB réussie');
-}).catch((error) => {
-  console.error('❌ Erreur de connexion à MongoDB:', error);
-  process.exit(1);
-});
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
-// Middleware pour les routes non trouvées
-app.use(notFoundHandler);
+// Route de base
+app.get('/', (req, res) => {
+  res.json({ message: 'API RESTful avec Node.js et Express' });
+});
 
 // Middleware de gestion d'erreurs
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+  console.log(`Serveur démarré sur le port ${PORT}`);
 });
 
 module.exports = app;
 ```
+<!-- @include:end api-project/src/app.js -->
 
 #### Modèle utilisateur avec Mongoose
 
 **src/models/User.js**
+<!-- @include:start api-project/src/models/User.js -->
 ```javascript
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true
+  },
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: true,
     unique: true,
-    lowercase: true,
     trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+    lowercase: true
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters long'],
-    select: false // N'inclut pas le mot de passe par défaut dans les requêtes
-  },
-  name: {
-    type: String,
-    required: [true, 'Name is required'],
-    trim: true,
-    minlength: [2, 'Name must be at least 2 characters long'],
-    maxlength: [50, 'Name cannot exceed 50 characters']
+    required: true,
+    minlength: 6
   },
   role: {
     type: String,
     enum: ['user', 'admin'],
     default: 'user'
   },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  lastLogin: {
-    type: Date
-  },
-  passwordChangedAt: {
-    type: Date
-  }
-}, {
-  timestamps: true,
-  toJSON: { 
-    transform: function(doc, ret) {
-      delete ret.password;
-      delete ret.__v;
-      return ret;
-    }
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-// Index pour améliorer les performances de recherche
-userSchema.index({ email: 1 });
-userSchema.index({ isActive: 1 });
-
-// Middleware pre-save pour hasher le mot de passe
+// Middleware pour hasher le mot de passe avant sauvegarde
 userSchema.pre('save', async function(next) {
-  // Ne hasher que si le mot de passe a été modifié
   if (!this.isModified('password')) return next();
   
   try {
-    // Hasher le mot de passe avec un coût de 12
-    this.password = await bcrypt.hash(this.password, 12);
-    
-    // Mettre à jour passwordChangedAt si ce n'est pas un nouvel utilisateur
-    if (!this.isNew) {
-      this.passwordChangedAt = Date.now() - 1000; // -1s pour éviter les problèmes de timing
-    }
-    
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
     next(error);
   }
 });
 
-// Méthode pour comparer les mots de passe
+// Méthode pour vérifier le mot de passe
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Méthode pour vérifier si le mot de passe a été changé après l'émission du JWT
-userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
-  if (this.passwordChangedAt) {
-    const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
-    return JWTTimestamp < changedTimestamp;
-  }
-  return false;
-};
-
-// Méthode statique pour trouver un utilisateur actif par email
-userSchema.statics.findActiveByEmail = function(email) {
-  return this.findOne({ email, isActive: true });
+// Méthode pour exclure le mot de passe lors de la sérialisation
+userSchema.methods.toJSON = function() {
+  const userObject = this.toObject();
+  delete userObject.password;
+  return userObject;
 };
 
 module.exports = mongoose.model('User', userSchema);
 ```
+<!-- @include:end api-project/src/models/User.js -->
 
 #### Contrôleurs et logique métier
 
 **src/controllers/authController.js**
+<!-- @include:start api-project/src/controllers/authController.js -->
 ```javascript
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import { AppError, AuthenticationError } from '../middleware/errorHandler.js';
+const jwt = require('jsonwebtoken');
+const { validationResult } = require('express-validator');
+const User = require('../models/User');
 
-// Fonction utilitaire pour générer un JWT
-const signToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+// Génération du JWT
+const generateToken = (userId) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET || 'secret_key', {
+    expiresIn: '24h'
   });
 };
 
-// Fonction utilitaire pour envoyer le token
-const createSendToken = (user, statusCode, res, message = 'Success') => {
-  const token = signToken(user._id);
-  
-  const cookieOptions = {
-    expires: new Date(Date.now() + (process.env.JWT_COOKIE_EXPIRES_IN || 24) * 60 * 60 * 1000),
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  };
-
-  res.cookie('jwt', token, cookieOptions);
-
-  // Mettre à jour la dernière connexion
-  user.lastLogin = new Date();
-  user.save({ validateBeforeSave: false });
-
-  res.status(statusCode).json({
-    status: 'success',
-    message,
-    token,
-    data: {
-      user
-    }
-  });
-};
-
-exports.register = async (req, res, next) => {
+// Inscription
+exports.register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    // Vérification des erreurs de validation
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false,
+        errors: errors.array() 
+      });
+    }
+
+    const { username, email, password } = req.body;
 
     // Vérifier si l'utilisateur existe déjà
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }]
+    });
+
     if (existingUser) {
-      return next(new AppError('Un utilisateur avec cet email existe déjà', 409));
+      return res.status(400).json({
+        success: false,
+        message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
+      });
     }
 
     // Créer le nouvel utilisateur
-    const newUser = await User.create({
-      name,
-      email,
-      password,
-      role: role || 'user'
+    const user = new User({ username, email, password });
+    await user.save();
+
+    // Générer le token
+    const token = generateToken(user._id);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        user: user.toJSON(),
+        token
+      }
     });
 
-    createSendToken(newUser, 201, res, 'Utilisateur créé avec succès');
   } catch (error) {
-    next(error);
+    console.error('Erreur lors de l\'inscription:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
   }
 };
 
-exports.login = async (req, res, next) => {
+// Connexion
+exports.login = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
     const { email, password } = req.body;
 
-    // Vérifier que l'email et le mot de passe sont fournis
-    if (!email || !password) {
-      return next(new AppError('Email et mot de passe requis', 400));
+    // Trouver l'utilisateur
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Identifiants invalides'
+      });
     }
 
-    // Trouver l'utilisateur et inclure le mot de passe
-    const user = await User.findActiveByEmail(email).select('+password');
-
-    // Vérifier si l'utilisateur existe et si le mot de passe est correct
-    if (!user || !(await user.comparePassword(password))) {
-      return next(new AuthenticationError('Email ou mot de passe incorrect'));
+    // Vérifier le mot de passe
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Identifiants invalides'
+      });
     }
 
-    createSendToken(user, 200, res, 'Connexion réussie');
-  } catch (error) {
-    next(error);
-  }
-};
+    // Générer le token
+    const token = generateToken(user._id);
 
-exports.logout = (req, res) => {
-  res.cookie('jwt', 'loggedout', {
-    expires: new Date(Date.now() + 10 * 1000),
-    httpOnly: true
-  });
-  
-  res.status(200).json({
-    status: 'success',
-    message: 'Déconnexion réussie'
-  });
-};
+    res.json({
+      success: true,
+      data: {
+        user: user.toJSON(),
+        token
+      }
+    });
 
-exports.refreshToken = async (req, res, next) => {
-  try {
-    const user = req.user; // Fourni par le middleware d'authentification
-    createSendToken(user, 200, res, 'Token rafraîchi');
   } catch (error) {
-    next(error);
+    console.error('Erreur lors de la connexion:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
   }
 };
 ```
+<!-- @include:end api-project/src/controllers/authController.js -->
 
 **src/controllers/userController.js**
+<!-- @include:start api-project/src/controllers/userController.js -->
 ```javascript
-import User from '../models/User.js';
-import { AppError } from '../middleware/errorHandler.js';
+const User = require('../models/User');
+const { validationResult } = require('express-validator');
 
-exports.getAllUsers = async (req, res, next) => {
+// Obtenir le profil utilisateur
+exports.getProfile = async (req, res) => {
   try {
-    // Pagination
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user.toJSON()
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération du profil:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+// Mettre à jour le profil utilisateur
+exports.updateProfile = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { username, email } = req.body;
+    const userId = req.user.userId;
+
+    // Vérifier si le nouvel email ou username existe déjà
+    if (email || username) {
+      const existingUser = await User.findOne({
+        _id: { $ne: userId },
+        $or: [
+          email && { email },
+          username && { username }
+        ].filter(Boolean)
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
+        });
+      }
+    }
+
+    // Mettre à jour l'utilisateur
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { username, email },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: updatedUser.toJSON()
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du profil:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+// Obtenir la liste des utilisateurs (admin seulement)
+exports.getUsers = async (req, res) => {
+  try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Filtres
-    const filter = { isActive: true };
-    if (req.query.role) {
-      filter.role = req.query.role;
-    }
-
-    // Tri
-    const sort = {};
-    if (req.query.sortBy) {
-      const parts = req.query.sortBy.split(':');
-      sort[parts[0]] = parts[1] === 'desc' ? -1 : 1;
-    } else {
-      sort.createdAt = -1; // Tri par défaut
-    }
-
-    const users = await User.find(filter)
-      .sort(sort)
+    const users = await User.find()
+      .select('-password')
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .sort({ createdAt: -1 });
 
-    const total = await User.countDocuments(filter);
+    const total = await User.countDocuments();
 
-    res.status(200).json({
-      status: 'success',
-      results: users.length,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      },
+    res.json({
+      success: true,
       data: {
-        users
+        users,
+        pagination: {
+          page,
+          pages: Math.ceil(total / limit),
+          total
+        }
       }
     });
+
   } catch (error) {
-    next(error);
-  }
-};
-
-exports.getUser = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.params.id);
-
-    if (!user || !user.isActive) {
-      return next(new AppError('Utilisateur non trouvé', 404));
-    }
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        user
-      }
+    console.error('Erreur lors de la récupération des utilisateurs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.updateUser = async (req, res, next) => {
-  try {
-    const { password, ...updateData } = req.body;
-
-    // Empêcher la mise à jour du mot de passe via cette route
-    if (password) {
-      return next(new AppError('Cette route ne permet pas la mise à jour du mot de passe', 400));
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
-
-    if (!user) {
-      return next(new AppError('Utilisateur non trouvé', 404));
-    }
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        user
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.deleteUser = async (req, res, next) => {
-  try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!user) {
-      return next(new AppError('Utilisateur non trouvé', 404));
-    }
-
-    res.status(204).json({
-      status: 'success',
-      data: null
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.getMe = (req, res, next) => {
-  req.params.id = req.user.id;
-  next();
-};
-
-exports.updateMe = async (req, res, next) => {
-  try {
-    // Filtrer les champs non autorisés
-    const allowedFields = ['name', 'email'];
-    const filteredBody = {};
-    
-    Object.keys(req.body).forEach(key => {
-      if (allowedFields.includes(key)) {
-        filteredBody[key] = req.body[key];
-      }
-    });
-
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user.id,
-      filteredBody,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        user: updatedUser
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.deleteMe = async (req, res, next) => {
-  try {
-    await User.findByIdAndUpdate(req.user.id, { isActive: false });
-
-    res.status(204).json({
-      status: 'success',
-      data: null
-    });
-  } catch (error) {
-    next(error);
   }
 };
 ```
+<!-- @include:end api-project/src/controllers/userController.js -->
 
 ### 2.2 Middlewares de sécurité et validation
 
 **src/middleware/auth.js**
+<!-- @include:start api-project/src/middleware/auth.js -->
 ```javascript
-import jwt from 'jsonwebtoken';
-import { promisify } from 'util';
-import User from '../models/User.js';
-import { AppError, AuthenticationError, AuthorizationError } from './errorHandler.js';
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-exports.protect = async (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
-    // 1) Récupérer le token
-    let token;
+    // Récupérer le token depuis l'en-tête Authorization
+    const authHeader = req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token manquant ou invalide'
+      });
+    }
+
+    const token = authHeader.substring(7); // Enlever "Bearer "
+
+    // Vérifier et décoder le token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key');
     
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    } else if (req.cookies.jwt) {
-      token = req.cookies.jwt;
+    // Vérifier que l'utilisateur existe encore
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
     }
 
-    if (!token) {
-      return next(new AuthenticationError('Vous n\'êtes pas connecté'));
-    }
-
-    // 2) Vérifier le token
-    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-
-    // 3) Vérifier si l'utilisateur existe toujours
-    const currentUser = await User.findById(decoded.id);
-    if (!currentUser || !currentUser.isActive) {
-      return next(new AuthenticationError('L\'utilisateur associé à ce token n\'existe plus'));
-    }
-
-    // 4) Vérifier si l'utilisateur a changé son mot de passe après l'émission du token
-    if (currentUser.changedPasswordAfter(decoded.iat)) {
-      return next(new AuthenticationError('Mot de passe récemment modifié. Veuillez vous reconnecter'));
-    }
-
-    // Donner accès à la route protégée
-    req.user = currentUser;
+    // Ajouter les informations utilisateur à la requête
+    req.user = decoded;
     next();
+
   } catch (error) {
+    console.error('Erreur d\'authentification:', error);
+    
     if (error.name === 'JsonWebTokenError') {
-      return next(new AuthenticationError('Token invalide'));
-    } else if (error.name === 'TokenExpiredError') {
-      return next(new AuthenticationError('Token expiré'));
+      return res.status(401).json({
+        success: false,
+        message: 'Token invalide'
+      });
     }
-    next(error);
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expiré'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
   }
 };
 
-exports.restrictTo = (...roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return next(new AuthorizationError('Vous n\'avez pas la permission d\'effectuer cette action'));
-    }
-    next();
-  };
-};
-
-exports.isOwnerOrAdmin = (req, res, next) => {
-  if (req.user.role === 'admin' || req.user.id === req.params.id) {
-    return next();
-  }
-  return next(new AuthorizationError('Vous pouvez seulement accéder à vos propres ressources'));
-};
+module.exports = authMiddleware;
 ```
+<!-- @include:end api-project/src/middleware/auth.js -->
+
+**src/middleware/validation.js**
+<!-- @include:start api-project/src/middleware/validation.js -->
+```javascript
+const { body } = require('express-validator');
+
+// Validation pour l'inscription
+exports.registerValidation = [
+  body('username')
+    .isLength({ min: 3 })
+    .withMessage('Le nom d\'utilisateur doit contenir au moins 3 caractères')
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Le nom d\'utilisateur ne peut contenir que des lettres, chiffres et underscores'),
+
+  body('email')
+    .isEmail()
+    .withMessage('Email invalide')
+    .normalizeEmail(),
+
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Le mot de passe doit contenir au moins 6 caractères')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Le mot de passe doit contenir au moins une minuscule, une majuscule et un chiffre')
+];
+
+// Validation pour la connexion
+exports.loginValidation = [
+  body('email')
+    .isEmail()
+    .withMessage('Email invalide')
+    .normalizeEmail(),
+
+  body('password')
+    .notEmpty()
+    .withMessage('Mot de passe requis')
+];
+
+// Validation pour la mise à jour du profil
+exports.updateProfileValidation = [
+  body('username')
+    .optional()
+    .isLength({ min: 3 })
+    .withMessage('Le nom d\'utilisateur doit contenir au moins 3 caractères')
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Le nom d\'utilisateur ne peut contenir que des lettres, chiffres et underscores'),
+
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Email invalide')
+    .normalizeEmail()
+];
+```
+<!-- @include:end api-project/src/middleware/validation.js -->
+
+**src/middleware/errorHandler.js**
+<!-- @include:start api-project/src/middleware/errorHandler.js -->
+```javascript
+const errorHandler = (err, req, res, next) => {
+  console.error('Erreur capturée par le middleware:', err);
+
+  // Erreur de validation Mongoose
+  if (err.name === 'ValidationError') {
+    const errors = Object.values(err.errors).map(e => ({
+      field: e.path,
+      message: e.message
+    }));
+    
+    return res.status(400).json({
+      success: false,
+      message: 'Erreur de validation',
+      errors
+    });
+  }
+
+  // Erreur de duplication MongoDB (code 11000)
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue)[0];
+    return res.status(400).json({
+      success: false,
+      message: `${field} existe déjà`
+    });
+  }
+
+  // Erreur CastError (ID MongoDB invalide)
+  if (err.name === 'CastError') {
+    return res.status(400).json({
+      success: false,
+      message: 'ID invalide'
+    });
+  }
+
+  // Erreur JWT
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Token invalide'
+    });
+  }
+
+  if (err.name === 'TokenExpiredError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Token expiré'
+    });
+  }
+
+  // Erreur par défaut
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Erreur serveur interne'
+  });
+};
+
+module.exports = errorHandler;
+```
+<!-- @include:end api-project/src/middleware/errorHandler.js -->
+
+**src/middleware/admin.js**
+<!-- @include:start api-project/src/middleware/admin.js -->
+```javascript
+const User = require('../models/User');
+
+// Middleware pour vérifier les rôles d'administrateur
+const adminMiddleware = async (req, res, next) => {
+  try {
+    // Récupérer l'utilisateur complet depuis la base de données
+    const user = await User.findById(req.user.userId);
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    // Vérifier que l'utilisateur a le rôle admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé. Droits administrateur requis.'
+      });
+    }
+
+    // Ajouter les informations utilisateur complètes à la requête
+    req.userFull = user;
+    next();
+
+  } catch (error) {
+    console.error('Erreur dans le middleware admin:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+module.exports = adminMiddleware;
+```
+<!-- @include:end api-project/src/middleware/admin.js -->
 
 ### 2.3 Routes et structure de l'API
 
-**src/routes/auth.js**
+**src/routes/authRoutes.js**
+<!-- @include:start api-project/src/routes/authRoutes.js -->
 ```javascript
-import express from 'express';
-import authController from '../controllers/authController.js';
-import { protect } from '../middleware/auth.js';
-import { validateRegistration, validateLogin } from '../middleware/validation.js';
-
+const express = require('express');
 const router = express.Router();
+const authController = require('../controllers/authController');
+const { registerValidation, loginValidation } = require('../middleware/validation');
 
-router.post('/register', validateRegistration, authController.register);
-router.post('/login', validateLogin, authController.login);
-router.post('/logout', authController.logout);
-router.post('/refresh-token', protect, authController.refreshToken);
+// POST /api/auth/register - Inscription
+router.post('/register', registerValidation, authController.register);
+
+// POST /api/auth/login - Connexion
+router.post('/login', loginValidation, authController.login);
 
 module.exports = router;
 ```
+<!-- @include:end api-project/src/routes/authRoutes.js -->
 
-**src/routes/users.js**
+**src/routes/userRoutes.js**
+<!-- @include:start api-project/src/routes/userRoutes.js -->
 ```javascript
-import express from 'express';
-import userController from '../controllers/userController.js';
-import { protect, restrictTo, isOwnerOrAdmin } from '../middleware/auth.js';
-import { validateUserUpdate } from '../middleware/validation.js';
-
+const express = require('express');
 const router = express.Router();
+const userController = require('../controllers/userController');
+const authMiddleware = require('../middleware/auth');
+const adminMiddleware = require('../middleware/admin');
+const { updateProfileValidation } = require('../middleware/validation');
 
-// Toutes les routes suivantes nécessitent une authentification
-router.use(protect);
+// GET /api/users/profile - Obtenir son profil (utilisateur connecté)
+router.get('/profile', authMiddleware, userController.getProfile);
 
-// Routes pour l'utilisateur connecté
-router.get('/me', userController.getMe, userController.getUser);
-router.patch('/updateMe', validateUserUpdate, userController.updateMe);
-router.delete('/deleteMe', userController.deleteMe);
+// PUT /api/users/profile - Mettre à jour son profil (utilisateur connecté)
+router.put('/profile', authMiddleware, updateProfileValidation, userController.updateProfile);
 
-// Routes administrateur
-router.use(restrictTo('admin'));
-
-router
-  .route('/')
-  .get(userController.getAllUsers);
-
-router
-  .route('/:id')
-  .get(userController.getUser)
-  .patch(validateUserUpdate, userController.updateUser)
-  .delete(userController.deleteUser);
+// GET /api/users - Obtenir la liste des utilisateurs (admin seulement)
+router.get('/', authMiddleware, adminMiddleware, userController.getUsers);
 
 module.exports = router;
 ```
+<!-- @include:end api-project/src/routes/userRoutes.js -->
+
+### 2.4 Tests automatisés
+
+**tests/api.test.js**
+<!-- @include:start api-project/tests/api.test.js -->
+```javascript
+const request = require('supertest');
+const app = require('../src/app');
+
+describe('API Tests', () => {
+  describe('GET /', () => {
+    it('should return welcome message', async () => {
+      const res = await request(app)
+        .get('/')
+        .expect(200);
+      
+      expect(res.body).toHaveProperty('message');
+      expect(res.body.message).toBe('API RESTful avec Node.js et Express');
+    });
+  });
+
+  describe('POST /api/auth/register', () => {
+    it('should register a new user', async () => {
+      const userData = {
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'Password123'
+      };
+
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(201);
+
+      expect(res.body).toHaveProperty('success', true);
+      expect(res.body.data).toHaveProperty('user');
+      expect(res.body.data).toHaveProperty('token');
+      expect(res.body.data.user.email).toBe(userData.email);
+    });
+
+    it('should not register user with invalid email', async () => {
+      const userData = {
+        username: 'testuser',
+        email: 'invalid-email',
+        password: 'Password123'
+      };
+
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(400);
+
+      expect(res.body).toHaveProperty('success', false);
+      expect(res.body).toHaveProperty('errors');
+    });
+  });
+});
+```
+<!-- @include:end api-project/tests/api.test.js -->
 
 Cette implémentation complète démontre tous les concepts RESTful et de sécurité abordés dans la partie théorique, avec une architecture moderne et scalable utilisant Node.js et Express.
 
