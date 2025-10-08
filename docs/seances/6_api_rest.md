@@ -164,14 +164,17 @@ Approche traditionnelle où l'état de session est maintenu côté serveur :
 
 ```javascript
 import session from 'express-session';
-import MongoStore from 'connect-mongo';
+import FileStore from 'session-file-store';
+
+const FileStoreSession = FileStore(session);
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI
+  store: new FileStoreSession({
+    path: './sessions',
+    encrypt: true
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production', // HTTPS only en production
@@ -476,20 +479,11 @@ const errorHandler = (err, req, res, next) => {
     });
   }
   
-  // Erreurs de validation Mongoose
+  // Erreurs de validation personnalisées
   if (err.name === 'ValidationError') {
-    const errors = Object.values(err.errors).map(e => e.message);
     return res.status(400).json({
       error: 'Validation failed',
-      details: errors
-    });
-  }
-  
-  // Erreurs de duplication MongoDB
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    return res.status(409).json({
-      error: `${field} already exists`
+      details: err.message
     });
   }
   
@@ -530,15 +524,9 @@ Protection contre les attaques par déni de service et les abus :
 
 ```javascript
 import rateLimit from 'express-rate-limit';
-import MongoStore from 'rate-limit-mongo';
 
-// Rate limiting global
+// Rate limiting global (stockage en mémoire)
 const globalLimiter = rateLimit({
-  store: new MongoStore({
-    uri: process.env.MONGODB_URI,
-    collectionName: 'rate-limits',
-    expireTimeMs: 15 * 60 * 1000 // 15 minutes
-  }),
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Maximum 100 requêtes par fenêtre
   message: {
@@ -564,45 +552,11 @@ app.use('/api/auth', authLimiter);
 ```
 
 ## 2. Application pratique avec Node.js et Express
+### 2.1 Création d'une API RESTful simple
 
-### 2.1 Création d'une API RESTful complète
+Avant de plonger dans l'implémentation complète, voici un exemple simple d'API RESTful basique pour comprendre les concepts fondamentaux ([📁 Voir sur GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance6/api-simple)) :
 
-Dans cette section, nous allons construire une API RESTful complète pour la gestion d'utilisateurs en utilisant Node.js et Express. Cette application démontrera tous les concepts théoriques abordés précédemment.
-
-#### Structure du projet
-
-```
-api-project/
-├── src/
-│   ├── controllers/
-│   │   ├── authController.js
-│   │   └── userController.js
-│   ├── middleware/
-│   │   ├── auth.js
-│   │   ├── validation.js
-│   │   └── errorHandler.js
-│   ├── models/
-│   │   └── User.js
-│   ├── routes/
-│   │   ├── auth.js
-│   │   └── users.js
-│   ├── services/
-│   │   ├── authService.js
-│   │   └── userService.js
-│   ├── utils/
-│   │   ├── database.js
-│   │   └── logger.js
-│   └── app.js
-├── tests/
-├── package.json
-└── .env
-```
-
-#### Exemple simple d'API RESTful
-
-Avant de plonger dans l'implémentation complète, voici un exemple simple d'API RESTful basique pour comprendre les concepts fondamentaux :
-
-**api-simple/server.js**
+::: details api-simple/server.js
 <!-- @include:start api-simple/server.js -->
 ```javascript
 const express = require('express');
@@ -742,8 +696,9 @@ app.listen(PORT, () => {
 });
 ```
 <!-- @include:end api-simple/server.js -->
+:::
 
-**api-simple/package.json**
+::: details api-simple/package.json
 <!-- @include:start api-simple/package.json -->
 ```json
 {
@@ -764,10 +719,49 @@ app.listen(PORT, () => {
 }
 ```
 <!-- @include:end api-simple/package.json -->
+:::
+
+### 2.2 Création d'une API RESTful complète
+
+Dans cette section, nous allons construire une API RESTful complète pour la gestion d'utilisateurs en utilisant Node.js et Express. Cette application démontrera tous les concepts théoriques abordés précédemment ([📁 Voir sur GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance6/api-project)).
+
+#### Structure du projet
+
+```
+api-project/
+├── src/
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   └── userController.js
+│   ├── middleware/
+│   │   ├── auth.js
+│   │   ├── validation.js
+│   │   └── errorHandler.js
+│   ├── models/
+│   │   └── User.js
+│   ├── routes/
+│   │   ├── auth.js
+│   │   └── users.js
+│   ├── services/
+│   │   ├── authService.js
+│   │   └── userService.js
+│   ├── utils/
+│   │   ├── database.js
+│   │   └── logger.js
+│   └── app.js
+├── tests/
+├── package.json
+└── .env
+```
+
+
+
+
+### 2.2 Implémentation complète avec sécurité et bonnes pratiques
 
 #### Configuration de base de l'application
 
-**package.json**
+::: details api-project/package.json
 <!-- @include:start api-project/package.json -->
 ```json
 {
@@ -782,7 +776,6 @@ app.listen(PORT, () => {
   },
   "dependencies": {
     "express": "^4.18.2",
-    "mongoose": "^7.5.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "express-validator": "^7.0.1",
@@ -799,12 +792,13 @@ app.listen(PORT, () => {
 }
 ```
 <!-- @include:end api-project/package.json -->
+:::
+<!-- @include:end api-project/package.json -->
 
-**Configuration principale (src/app.js)**
+::: details Configuration principale (src/app.js)
 <!-- @include:start api-project/src/app.js -->
 ```javascript
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -815,12 +809,6 @@ const userRoutes = require('./routes/userRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
-
-// Configuration de la base de données
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/api-restful', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
 
 // Middleware de sécurité
 app.use(helmet());
@@ -857,77 +845,202 @@ app.listen(PORT, () => {
 module.exports = app;
 ```
 <!-- @include:end api-project/src/app.js -->
+:::
 
-#### Modèle utilisateur avec Mongoose
+#### Modèle utilisateur avec stockage en fichiers JSON
 
-**src/models/User.js**
+Dans cette section, nous utilisons un système de stockage basé sur des fichiers JSON. Cette approche est idéale pour :
+- **Apprentissage** : Se concentrer sur les concepts REST sans la complexité d'une base de données
+- **Prototypage rapide** : Démarrer rapidement sans configuration de base de données
+- **Environnements simples** : Applications légères ou environnements de développement
+
+Le modèle `User` implémente une interface simple et efficace pour la gestion des données utilisateurs.
+
+::: details src/models/User.js
 <!-- @include:start api-project/src/models/User.js -->
 ```javascript
-const mongoose = require('mongoose');
+const fs = require('fs').promises;
+const path = require('path');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+class FileDataStore {
+  constructor(filename) {
+    this.filename = filename;
+    this.dataDir = path.join(__dirname, '..', 'data');
+    this.filePath = path.join(this.dataDir, `${filename}.json`);
+    this.ensureDataDir();
   }
-});
 
-// Middleware pour hasher le mot de passe avant sauvegarde
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+  async ensureDataDir() {
+    try {
+      await fs.mkdir(this.dataDir, { recursive: true });
+    } catch (error) {
+      // Directory already exists
+    }
   }
-});
 
-// Méthode pour vérifier le mot de passe
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
+  async readData() {
+    try {
+      const data = await fs.readFile(this.filePath, 'utf8');
+      return JSON.parse(data);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return [];
+      }
+      throw error;
+    }
+  }
 
-// Méthode pour exclure le mot de passe lors de la sérialisation
-userSchema.methods.toJSON = function() {
-  const userObject = this.toObject();
-  delete userObject.password;
-  return userObject;
-};
+  async writeData(data) {
+    await fs.writeFile(this.filePath, JSON.stringify(data, null, 2));
+  }
+}
 
-module.exports = mongoose.model('User', userSchema);
+class User {
+  constructor(userData) {
+    this.id = userData.id || Date.now().toString();
+    this.username = userData.username;
+    this.email = userData.email;
+    this.password = userData.password;
+    this.role = userData.role || 'user';
+    this.createdAt = userData.createdAt || new Date().toISOString();
+  }
+
+  static dataStore = new FileDataStore('users');
+
+  // Méthode pour hasher le mot de passe
+  async hashPassword() {
+    if (this.password && !this.password.startsWith('$2a$')) {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+  }
+
+  // Méthode pour vérifier le mot de passe
+  async comparePassword(candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
+  }
+
+  // Méthode pour exclure le mot de passe lors de la sérialisation
+  toJSON() {
+    const userObject = { ...this };
+    delete userObject.password;
+    return userObject;
+  }
+
+  // Sauvegarder un utilisateur
+  async save() {
+    await this.hashPassword();
+    const users = await User.dataStore.readData();
+    
+    // Vérifier si l'utilisateur existe déjà
+    const existingIndex = users.findIndex(u => u.id === this.id);
+    
+    if (existingIndex >= 0) {
+      users[existingIndex] = this;
+    } else {
+      users.push(this);
+    }
+    
+    await User.dataStore.writeData(users);
+    return this;
+  }
+
+  // Trouver un utilisateur par critères
+  static async findOne(criteria) {
+    const users = await User.dataStore.readData();
+    
+    return users.find(user => {
+      if (criteria.$or) {
+        return criteria.$or.some(condition => {
+          return Object.keys(condition).every(key => 
+            user[key] === condition[key]
+          );
+        });
+      }
+      
+      if (criteria._id && criteria._id.$ne) {
+        return Object.keys(criteria).every(key => {
+          if (key === '_id') return user.id !== criteria._id.$ne;
+          return user[key] === criteria[key];
+        });
+      }
+      
+      return Object.keys(criteria).every(key => 
+        user[key] === criteria[key]
+      );
+    });
+  }
+
+  // Trouver un utilisateur par ID
+  static async findById(id) {
+    const users = await User.dataStore.readData();
+    return users.find(user => user.id === id);
+  }
+
+  // Trouver et mettre à jour un utilisateur
+  static async findByIdAndUpdate(id, updates, options = {}) {
+    const users = await User.dataStore.readData();
+    const userIndex = users.findIndex(user => user.id === id);
+    
+    if (userIndex === -1) {
+      return null;
+    }
+    
+    users[userIndex] = { ...users[userIndex], ...updates };
+    
+    if (options.new) {
+      await User.dataStore.writeData(users);
+      return users[userIndex];
+    }
+    
+    const oldUser = { ...users[userIndex] };
+    await User.dataStore.writeData(users);
+    return oldUser;
+  }
+
+  // Trouver tous les utilisateurs avec pagination
+  static async find(options = {}) {
+    const users = await User.dataStore.readData();
+    return users;
+  }
+
+  // Compter les documents
+  static async countDocuments() {
+    const users = await User.dataStore.readData();
+    return users.length;
+  }
+}
+
+module.exports = User;
 ```
 <!-- @include:end api-project/src/models/User.js -->
+:::
+
+**Points importants sur le stockage en fichiers JSON :**
+
+**Avantages :**
+- 🚀 **Simplicité** : Pas de configuration de base de données requise
+- 📁 **Transparence** : Les données sont lisibles dans des fichiers JSON
+- 🔄 **Persistance** : Les données survivent au redémarrage du serveur
+- 🛠️ **Développement** : Idéal pour l'apprentissage et le prototypage
+
+**Inconvénients :**
+- 📊 **Performance** : Lecture/écriture complète du fichier à chaque opération
+- 🔒 **Concurrence** : Pas de protection contre les accès simultanés
+- 📈 **Scalabilité** : Inadapté pour de gros volumes de données
+- 🔍 **Requêtes** : Pas de requêtes complexes ou d'indexation
+
+**Structure des fichiers de données :**
+```
+src/
+  data/
+    users.json    # Fichier contenant tous les utilisateurs
+```
 
 #### Contrôleurs et logique métier
 
-**src/controllers/authController.js**
+::: details src/controllers/authController.js
 <!-- @include:start api-project/src/controllers/authController.js -->
 ```javascript
 const jwt = require('jsonwebtoken');
@@ -972,7 +1085,7 @@ exports.register = async (req, res) => {
     await user.save();
 
     // Générer le token
-    const token = generateToken(user._id);
+    const token = generateToken(user.id);
 
     res.status(201).json({
       success: true,
@@ -1023,7 +1136,7 @@ exports.login = async (req, res) => {
     }
 
     // Générer le token
-    const token = generateToken(user._id);
+    const token = generateToken(user.id);
 
     res.json({
       success: true,
@@ -1043,8 +1156,9 @@ exports.login = async (req, res) => {
 };
 ```
 <!-- @include:end api-project/src/controllers/authController.js -->
+:::
 
-**src/controllers/userController.js**
+::: details src/controllers/userController.js
 <!-- @include:start api-project/src/controllers/userController.js -->
 ```javascript
 const User = require('../models/User');
@@ -1141,11 +1255,14 @@ exports.getUsers = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const users = await User.find()
-      .select('-password')
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    const allUsers = await User.find();
+    const users = allUsers
+      .map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      })
+      .slice(skip, skip + limit)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     const total = await User.countDocuments();
 
@@ -1171,10 +1288,11 @@ exports.getUsers = async (req, res) => {
 };
 ```
 <!-- @include:end api-project/src/controllers/userController.js -->
+:::
 
 ### 2.2 Middlewares de sécurité et validation
 
-**src/middleware/auth.js**
+::: details src/middleware/auth.js
 <!-- @include:start api-project/src/middleware/auth.js -->
 ```javascript
 const jwt = require('jsonwebtoken');
@@ -1237,7 +1355,8 @@ module.exports = authMiddleware;
 ```
 <!-- @include:end api-project/src/middleware/auth.js -->
 
-**src/middleware/validation.js**
+
+::: details src/middleware/validation.js
 <!-- @include:start api-project/src/middleware/validation.js -->
 ```javascript
 const { body } = require('express-validator');
@@ -1291,41 +1410,20 @@ exports.updateProfileValidation = [
 ];
 ```
 <!-- @include:end api-project/src/middleware/validation.js -->
+:::
 
-**src/middleware/errorHandler.js**
+::: details src/middleware/errorHandler.js
 <!-- @include:start api-project/src/middleware/errorHandler.js -->
 ```javascript
 const errorHandler = (err, req, res, next) => {
   console.error('Erreur capturée par le middleware:', err);
 
-  // Erreur de validation Mongoose
+  // Erreur de validation personnalisée
   if (err.name === 'ValidationError') {
-    const errors = Object.values(err.errors).map(e => ({
-      field: e.path,
-      message: e.message
-    }));
-    
     return res.status(400).json({
       success: false,
       message: 'Erreur de validation',
-      errors
-    });
-  }
-
-  // Erreur de duplication MongoDB (code 11000)
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    return res.status(400).json({
-      success: false,
-      message: `${field} existe déjà`
-    });
-  }
-
-  // Erreur CastError (ID MongoDB invalide)
-  if (err.name === 'CastError') {
-    return res.status(400).json({
-      success: false,
-      message: 'ID invalide'
+      details: err.message
     });
   }
 
@@ -1354,8 +1452,9 @@ const errorHandler = (err, req, res, next) => {
 module.exports = errorHandler;
 ```
 <!-- @include:end api-project/src/middleware/errorHandler.js -->
+:::
 
-**src/middleware/admin.js**
+::: details src/middleware/admin.js
 <!-- @include:start api-project/src/middleware/admin.js -->
 ```javascript
 const User = require('../models/User');
@@ -1397,10 +1496,11 @@ const adminMiddleware = async (req, res, next) => {
 module.exports = adminMiddleware;
 ```
 <!-- @include:end api-project/src/middleware/admin.js -->
+:::
 
 ### 2.3 Routes et structure de l'API
 
-**src/routes/authRoutes.js**
+::: details src/routes/authRoutes.js
 <!-- @include:start api-project/src/routes/authRoutes.js -->
 ```javascript
 const express = require('express');
@@ -1417,8 +1517,9 @@ router.post('/login', loginValidation, authController.login);
 module.exports = router;
 ```
 <!-- @include:end api-project/src/routes/authRoutes.js -->
+:::
 
-**src/routes/userRoutes.js**
+::: details src/routes/userRoutes.js
 <!-- @include:start api-project/src/routes/userRoutes.js -->
 ```javascript
 const express = require('express');
@@ -1440,10 +1541,11 @@ router.get('/', authMiddleware, adminMiddleware, userController.getUsers);
 module.exports = router;
 ```
 <!-- @include:end api-project/src/routes/userRoutes.js -->
+:::
 
 ### 2.4 Tests automatisés
 
-**tests/api.test.js**
+::: details tests/api.test.js
 <!-- @include:start api-project/tests/api.test.js -->
 ```javascript
 const request = require('supertest');
@@ -1499,26 +1601,22 @@ describe('API Tests', () => {
 });
 ```
 <!-- @include:end api-project/tests/api.test.js -->
+:::
 
 Cette implémentation complète démontre tous les concepts RESTful et de sécurité abordés dans la partie théorique, avec une architecture moderne et scalable utilisant Node.js et Express.
+
 
 ## 3. Exercices pratiques
 
 ### Exercice 1 : Extension de l'API
-Étendez l'API de gestion d'utilisateurs en ajoutant :
-1. Un système de changement de mot de passe
-2. Une fonctionnalité de récupération de mot de passe par email
-3. Un système de rôles plus granulaire avec permissions spécifiques
+Étendez l'API de gestion d'utilisateurs en ajoutant un système de changement de mot de passe.
+
 
 ### Exercice 2 : Tests automatisés
-Implémentez des tests unitaires et d'intégration pour l'API en utilisant Jest et Supertest.
+Testez toutes les routes de l'API en utilisant Jest et Supertest pour assurer la robustesse et la fiabilité de l'application (seules 2 sont testées pour le moment).
 
 ### Exercice 3 : Documentation API
 Créez une documentation complète de votre API en utilisant Swagger/OpenAPI.
-
-Ces exercices permettront de consolider les connaissances acquises et d'approfondir la maîtrise des APIs RESTful avec Node.js et Express.
-
-
 
 
 

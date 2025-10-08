@@ -92,11 +92,14 @@ exports.getUsers = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const users = await User.find()
-      .select('-password')
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    const allUsers = await User.find();
+    const users = allUsers
+      .map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      })
+      .slice(skip, skip + limit)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     const total = await User.countDocuments();
 

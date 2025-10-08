@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -10,12 +9,6 @@ const userRoutes = require('./routes/userRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
-
-// Configuration de la base de données
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/api-restful', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
 
 // Middleware de sécurité
 app.use(helmet());

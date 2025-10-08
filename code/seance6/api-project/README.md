@@ -1,6 +1,6 @@
 # API RESTful avec Node.js et Express
 
-Cette application est un exemple complet d'API RESTful construite avec Node.js, Express et MongoDB.
+Cette application est un exemple complet d'API RESTful construite avec Node.js, Express et fichiers JSON.
 
 ## Fonctionnalités
 
@@ -20,8 +20,7 @@ npm install
 ```
 
 3. Créer un fichier `.env` basé sur `.env.example`
-4. Démarrer MongoDB sur votre système
-5. Lancer l'application :
+4. Lancer l'application :
 
 ```bash
 # Mode développement

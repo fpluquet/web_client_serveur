@@ -1,34 +1,12 @@
 const errorHandler = (err, req, res, next) => {
   console.error('Erreur capturée par le middleware:', err);
 
-  // Erreur de validation Mongoose
+  // Erreur de validation personnalisée
   if (err.name === 'ValidationError') {
-    const errors = Object.values(err.errors).map(e => ({
-      field: e.path,
-      message: e.message
-    }));
-    
     return res.status(400).json({
       success: false,
       message: 'Erreur de validation',
-      errors
-    });
-  }
-
-  // Erreur de duplication MongoDB (code 11000)
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyValue)[0];
-    return res.status(400).json({
-      success: false,
-      message: `${field} existe déjà`
-    });
-  }
-
-  // Erreur CastError (ID MongoDB invalide)
-  if (err.name === 'CastError') {
-    return res.status(400).json({
-      success: false,
-      message: 'ID invalide'
+      details: err.message
     });
   }
 
