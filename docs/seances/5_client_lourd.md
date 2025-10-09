@@ -1623,9 +1623,10 @@ button[type="submit"]:hover {
 3. **Accès à l'application :**
    Ouvrez votre navigateur et allez à `http://localhost:3000`
 
-### Exercice 2.1: Étendre l'application todolist
+### Exercice 3.1: Étendre l'application todolist
 
 1. Ajoutez la possibilité de modifier le texte d'une todo existante
 2. Implémentez un système de filtrage (toutes, complétées, en cours)
 3. Ajoutez une fonctionnalité "Tout marquer comme complété"
 4. Créez un système de catégories pour organiser les todos
+
