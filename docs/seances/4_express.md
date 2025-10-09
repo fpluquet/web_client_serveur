@@ -827,7 +827,7 @@ router.delete('/:id', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;
 ```
 
 **Fichier : `app.js`**
@@ -916,7 +916,7 @@ router.delete('/users/:id', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;
 ```
 
 ### 8.4 Router avec paramètres et sous-routers
@@ -999,7 +999,7 @@ router.post('/:postId/comments', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;
 ```
 
 ### 8.5 Application complète avec plusieurs routers
@@ -1741,7 +1741,7 @@ router.post('/', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;
 ```
 
 **Fichier : `app.js`**
@@ -1873,7 +1873,7 @@ router.put('/:id/complete', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;
 ```
 
 **Fichier : `app.js`**
@@ -1921,3 +1921,4 @@ app.listen(3000, () => {
 ```
 
 </details>
+
