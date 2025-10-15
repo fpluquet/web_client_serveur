@@ -188,42 +188,583 @@ app.use(session({
 - **Inconvénients** : Moins scalable, état côté serveur, problèmes avec les applications distribuées
 
 **2. JSON Web Tokens (JWT)**
-Tokens autoportés contenant des informations d'authentification :
+
+Les **JSON Web Tokens (JWT)** sont devenus le standard de facto pour l'authentification stateless dans les applications web modernes. Un JWT est un token sécurisé et autoporté qui permet de transmettre des informations d'identité entre parties de manière compacte et vérifiable.
+
+#### Structure complète d'un JWT
+
+Un JWT est composé de **trois parties** séparées par des points (`.`) :
+
+```
+header.payload.signature
+```
+
+**Exemple de JWT complet :**
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+
+##### 1. Header (En-tête)
+Contient les métadonnées sur le token :
+
+```json
+{
+  "alg": "HS256",    // Algorithme de signature (HMAC SHA256)
+  "typ": "JWT"       // Type de token
+}
+```
+
+**Algorithmes de signature supportés :**
+- **HS256** (HMAC SHA256) : Signature symétrique avec clé secrète partagée
+- **RS256** (RSA SHA256) : Signature asymétrique avec clé privée/publique
+- **ES256** (ECDSA SHA256) : Signature avec courbes elliptiques
+
+##### 2. Payload (Charge utile)
+Contient les **claims** (revendications) - les données sur l'utilisateur et le token :
+
+```json
+{
+  "sub": "1234567890",           // Subject - identifiant unique
+  "name": "John Doe",            // Claim personnalisé
+  "email": "john@example.com",   // Claim personnalisé
+  "role": "admin",               // Claim personnalisé
+  "iat": 1516239022,             // Issued At - moment de création
+  "exp": 1516325422,             // Expiration - moment d'expiration
+  "iss": "my-app",               // Issuer - qui a émis le token
+  "aud": "my-app-users"          // Audience - à qui est destiné le token
+}
+```
+
+**Types de claims :**
+
+- **Claims standards (RFC 7519) :**
+  - `iss` (issuer) : Émetteur du token
+  - `sub` (subject) : Sujet (généralement l'ID utilisateur)
+  - `aud` (audience) : Destinataire prévu
+  - `exp` (expiration) : Date d'expiration (timestamp UNIX)
+  - `iat` (issued at) : Date de création
+  - `nbf` (not before) : Date avant laquelle le token n'est pas valide
+  - `jti` (JWT ID) : Identifiant unique du token
+
+- **Claims personnalisés :**
+  - `role`, `permissions`, `email`, `username`, etc.
+  - ⚠️ **Attention** : Ne jamais inclure de données sensibles (mots de passe, numéros de carte de crédit)
+
+##### 3. Signature
+**Garantit l'intégrité et l'authenticité du token** - C'est LE mécanisme de sécurité des JWT :
+
+```javascript
+// Pour HS256 (HMAC SHA256)
+HMACSHA256(
+  base64UrlEncode(header) + "." + base64UrlEncode(payload),
+  secret
+)
+```
+
+**Comment la sécurité est assurée :**
+
+1. **Processus de création de la signature :**
+   ```javascript
+   // 1. Concaténation des parties encodées
+   const message = base64UrlEncode(header) + "." + base64UrlEncode(payload);
+   
+   // 2. Calcul du hash cryptographique avec la clé secrète
+   const signature = crypto
+     .createHmac('sha256', SECRET_KEY)  // Clé secrète connue SEULEMENT du serveur
+     .update(message)                   // Message à signer
+     .digest('base64url');              // Résultat en base64url
+   ```
+
+2. **Processus de vérification :**
+   ```javascript
+   // Côté serveur, lors de la réception d'un token
+   const [receivedHeader, receivedPayload, receivedSignature] = token.split('.');
+   
+   // Recalcul de la signature attendue
+   const expectedSignature = crypto
+     .createHmac('sha256', SECRET_KEY)
+     .update(`${receivedHeader}.${receivedPayload}`)
+     .digest('base64url');
+   
+   // Comparaison sécurisée
+   if (crypto.timingSafeEqual(
+     Buffer.from(expectedSignature), 
+     Buffer.from(receivedSignature)
+   )) {
+     console.log('✅ Token authentique et non modifié');
+   } else {
+     console.log('❌ Token invalide ou modifié');
+   }
+   ```
+
+**Types d'algorithmes de signature et leur sécurité :**
+
+- **HS256** (HMAC SHA256) : 
+  - 🔑 **Clé symétrique** : Même clé pour signer et vérifier
+  - ✅ **Avantages** : Rapide, simple à implémenter
+  - ⚠️ **Inconvénients** : Tous les services doivent partager la même clé secrète
+  - 🔐 **Sécurité** : Repose sur le secret de la clé partagée
+
+- **RS256** (RSA SHA256) :
+  - 🔑 **Clé asymétrique** : Clé privée pour signer, clé publique pour vérifier
+  - ✅ **Avantages** : Permet la distribution de la vérification sans partager la clé de signature
+  - ⚠️ **Inconvénients** : Plus lent, plus complexe
+  - 🔐 **Sécurité** : Repose sur la cryptographie à clé publique
+
+- **ES256** (ECDSA SHA256) :
+  - 🔑 **Courbes elliptiques** : Plus efficace que RSA pour la même sécurité
+  - ✅ **Avantages** : Signatures plus courtes, meilleure performance
+  - ⚠️ **Inconvénients** : Support moins universel
+  - 🔐 **Sécurité** : Repose sur le problème du logarithme discret sur courbes elliptiques
+
+**Exemple pratique de tentative d'attaque :**
+
+```javascript
+// ❌ Tentative de modification malveillante d'un token
+const originalToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjMiLCJyb2xlIjoidXNlciJ9.signature";
+
+// Un attaquant essaie de modifier le payload pour devenir admin
+const maliciousPayload = {
+  userId: "123",
+  role: "admin"  // ❌ Modification malveillante
+};
+
+const encodedMaliciousPayload = Buffer.from(JSON.stringify(maliciousPayload)).toString('base64url');
+const [header, , originalSignature] = originalToken.split('.');
+
+// Token modifié avec l'ancienne signature
+const tamperedToken = `${header}.${encodedMaliciousPayload}.${originalSignature}`;
+
+// ✅ Le serveur détecte la modification lors de la vérification
+const verifyTamperedToken = (token, secret) => {
+  const [h, p, s] = token.split('.');
+  const expectedSig = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
+  
+  if (expectedSig !== s) {
+    throw new Error('🚨 ATTAQUE DÉTECTÉE : Token modifié !');
+  }
+};
+```
+
+**Pourquoi la signature est inviolable :**
+- Sans la clé secrète, impossible de générer une signature valide
+- Toute modification du header ou payload invalide la signature
+- Les algorithmes cryptographiques utilisés sont computationnellement sûrs
+- La vérification détecte immédiatement toute tentative de falsification
+
+
+#### ⚠️ **IMPORTANT : Encodage vs Chiffrement dans les JWT**
+
+**Les JWT ne sont PAS chiffrés !** Il s'agit d'une confusion courante mais critique pour la sécurité :
+
+**Ce qui est ENCODÉ (Base64URL) :**
+- ✅ **Header** : `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9` → `{"alg":"HS256","typ":"JWT"}`
+- ✅ **Payload** : `eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ` → `{"userId":"1234567890","name":"John Doe","iat":1516239022}`
+
+**Ce qui est CRYPTOGRAPHIQUEMENT SÉCURISÉ :**
+- 🔐 **Signature** : `SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c` → Hash cryptographique HMAC-SHA256
+
+**Démonstration pratique :**
+
+```javascript
+// N'importe qui peut décoder le contenu d'un JWT
+const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+
+const [header, payload, signature] = token.split('.');
+
+// Décodage du header (sans clé secrète !)
+const decodedHeader = JSON.parse(Buffer.from(header, 'base64url').toString());
+console.log(decodedHeader); // {"alg":"HS256","typ":"JWT"}
+
+// Décodage du payload (sans clé secrète !)
+const decodedPayload = JSON.parse(Buffer.from(payload, 'base64url').toString());
+console.log(decodedPayload); // {"userId":"1234567890","name":"John Doe","iat":1516239022}
+
+// ⚠️ La signature ne peut être vérifiée QUE avec la clé secrète
+```
+
+**Implications de sécurité critiques :**
+
+1. **❌ JAMAIS de données sensibles dans le payload** :
+   ```javascript
+   // ❌ DANGEREUX - Visible par tous !
+   const badPayload = {
+     userId: "123",
+     password: "secret123",        // ❌ Lisible par tous !
+     creditCard: "1234-5678-9012", // ❌ Lisible par tous !
+     apiKey: "sk_live_abc123"      // ❌ Lisible par tous !
+   };
+   
+   // ✅ CORRECT - Données non sensibles uniquement
+   const goodPayload = {
+     userId: "123",
+     email: "user@example.com",    // ✅ Information publique
+     role: "user",                 // ✅ Information de contexte
+     permissions: ["read"]         // ✅ Information de contexte
+   };
+   ```
+
+2. **🔐 La sécurité repose uniquement sur la signature** :
+   - La signature garantit que le token n'a pas été modifié
+   - Elle confirme que le token provient d'une source de confiance (qui possède la clé secrète)
+   - Elle ne cache PAS le contenu du payload
+
+3. **🔍 Vérification de l'intégrité** :
+   ```javascript
+   // Processus de vérification d'un JWT
+   const verifyJWT = (token, secret) => {
+     const [header, payload, signature] = token.split('.');
+     
+     // 1. Recalculer la signature avec la clé secrète
+     const expectedSignature = crypto
+       .createHmac('sha256', secret)
+       .update(`${header}.${payload}`)
+       .digest('base64url');
+     
+     // 2. Comparer avec la signature fournie
+     if (expectedSignature !== signature) {
+       throw new Error('Token modifié ou invalide !');
+     }
+     
+     // 3. Si les signatures correspondent → token authentique
+     return JSON.parse(Buffer.from(payload, 'base64url').toString());
+   };
+   ```
+
+**En résumé :**
+- 📖 **Encodage Base64URL** : Permet la transmission et le stockage facile (lisible par tous)
+- 🔐 **Signature cryptographique** : Garantit l'authenticité et l'intégrité (vérifiable seulement avec la clé secrète)
+- ⚠️ **Pas de chiffrement** : Le contenu est visible, ne jamais y mettre de données sensibles !
+
+#### Implémentation pratique avec Node.js
+
+**Génération complète d'un JWT :**
 
 ```javascript
 import jwt from 'jsonwebtoken';
 
-// Génération du token
 const generateToken = (user) => {
-  return jwt.sign(
-    { 
-      userId: user._id, 
-      email: user.email,
-      role: user.role 
-    },
-    process.env.JWT_SECRET,
-    { 
-      expiresIn: '24h',
-      issuer: 'your-app-name',
-      audience: 'your-app-users'
-    }
-  );
+  // Payload avec claims standards et personnalisés
+  const payload = {
+    // Claims standards
+    sub: user._id,                    // Subject (ID utilisateur)
+    iat: Math.floor(Date.now() / 1000), // Issued at
+    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // Expire dans 24h
+    iss: 'my-app',                    // Issuer
+    aud: 'my-app-users',              // Audience
+    
+    // Claims personnalisés
+    email: user.email,
+    role: user.role,
+    permissions: user.permissions,
+    username: user.username
+  };
+
+  // Options supplémentaires
+  const options = {
+    algorithm: 'HS256',               // Algorithme de signature
+    expiresIn: '24h',                 // Alternative à exp dans payload
+    issuer: 'my-app',                 // Alternative à iss dans payload
+    audience: 'my-app-users',         // Alternative à aud dans payload
+    subject: user._id.toString(),     // Alternative à sub dans payload
+    jwtid: generateUniqueId()         // ID unique pour le token
+  };
+
+  return jwt.sign(payload, process.env.JWT_SECRET, options);
 };
 
-// Vérification du token
-const verifyToken = (token) => {
-  return jwt.verify(token, process.env.JWT_SECRET);
+// Fonction helper pour générer un ID unique
+const generateUniqueId = () => {
+  return require('crypto').randomBytes(16).toString('hex');
 };
 ```
 
-**Structure d'un JWT** :
-- **Header** : Type de token et algorithme de signature
-- **Payload** : Données (claims)
-- **Signature** : Vérification de l'intégrité
+**Vérification et décodage :**
 
-**Avantages & Inconvénients** :
-- **Avantages** : Sans état, scalable, décentralisé
-- **Inconvénients** : Révocation complexe, taille des tokens, sécurité du secret
+```javascript
+const verifyToken = (token) => {
+  try {
+    // Options de vérification
+    const options = {
+      algorithms: ['HS256'],           // Algorithmes acceptés
+      issuer: 'my-app',               // Vérifier l'émetteur
+      audience: 'my-app-users',       // Vérifier l'audience
+      clockTolerance: 30,             // Tolérance de 30 secondes pour l'horloge
+      maxAge: '24h'                   // Age maximum du token
+    };
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, options);
+    
+    // Vérifications supplémentaires
+    if (!decoded.sub || !decoded.email) {
+      throw new Error('Token invalide : claims manquants');
+    }
+
+    return {
+      valid: true,
+      payload: decoded,
+      userId: decoded.sub,
+      email: decoded.email,
+      role: decoded.role
+    };
+
+  } catch (error) {
+    return {
+      valid: false,
+      error: error.message,
+      expired: error.name === 'TokenExpiredError',
+      invalid: error.name === 'JsonWebTokenError'
+    };
+  }
+};
+```
+
+**Middleware d'authentification complet :**
+
+```javascript
+const jwtMiddleware = async (req, res, next) => {
+  try {
+    // 1. Extraction du token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Token manquant',
+        message: 'Format attendu: Authorization: Bearer <token>'
+      });
+    }
+
+    const token = authHeader.substring(7); // Enlever "Bearer "
+
+    // 2. Vérification du token
+    const verification = verifyToken(token);
+    if (!verification.valid) {
+      const statusCode = verification.expired ? 401 : 403;
+      return res.status(statusCode).json({
+        error: verification.expired ? 'Token expiré' : 'Token invalide',
+        details: verification.error
+      });
+    }
+
+    // 3. Enrichissement de la requête
+    req.user = verification.payload;
+    req.userId = verification.userId;
+    req.userRole = verification.role;
+
+    // 4. Vérifications métier supplémentaires (optionnel)
+    const user = await User.findById(verification.userId);
+    if (!user || !user.active) {
+      return res.status(401).json({
+        error: 'Utilisateur inactif ou supprimé'
+      });
+    }
+
+    next();
+
+  } catch (error) {
+    console.error('Erreur middleware JWT:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+```
+
+#### Gestion du cycle de vie des tokens
+
+**Refresh Tokens pour la sécurité renforcée :**
+
+```javascript
+class TokenService {
+  // Génération de paire access/refresh tokens
+  static generateTokenPair(user) {
+    // Access token courte durée (15 minutes)
+    const accessToken = jwt.sign(
+      { 
+        sub: user._id, 
+        email: user.email, 
+        role: user.role,
+        type: 'access'
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    // Refresh token longue durée (7 jours)
+    const refreshToken = jwt.sign(
+      {
+        sub: user._id,
+        type: 'refresh',
+        jti: crypto.randomBytes(16).toString('hex') // ID unique
+      },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return { accessToken, refreshToken };
+  } 
+
+  // Renouvellement des tokens
+  static async refreshAccessToken(refreshToken) {
+    try {
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+      
+      if (decoded.type !== 'refresh') {
+        throw new Error('Type de token invalide');
+      }
+
+      // Vérifier que le refresh token existe en base (pour révocation)
+      const tokenRecord = await RefreshToken.findOne({ 
+        userId: decoded.sub, 
+        tokenId: decoded.jti 
+      });
+
+      if (!tokenRecord || tokenRecord.revoked) {
+        throw new Error('Refresh token révoqué');
+      }
+
+      // Récupérer l'utilisateur
+      const user = await User.findById(decoded.sub);
+      if (!user) {
+        throw new Error('Utilisateur non trouvé');
+      }
+
+      // Générer nouveau access token
+      const newAccessToken = jwt.sign(
+        { 
+          sub: user._id, 
+          email: user.email, 
+          role: user.role,
+          type: 'access'
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '15m' }
+      );
+
+      return { accessToken: newAccessToken };
+
+    } catch (error) {
+      throw new Error('Refresh token invalide');
+    }
+  }
+
+  // Révocation des tokens (logout)
+  static async revokeTokens(userId, tokenId = null) {
+    if (tokenId) {
+      // Révoquer un token spécifique
+      await RefreshToken.updateOne(
+        { userId, tokenId },
+        { revoked: true, revokedAt: new Date() }
+      );
+    } else {
+      // Révoquer tous les tokens de l'utilisateur
+      await RefreshToken.updateMany(
+        { userId },
+        { revoked: true, revokedAt: new Date() }
+      );
+    }
+  }
+}
+```
+
+#### Sécurisation avancée des JWT
+
+**1. Configuration sécurisée :**
+
+```javascript
+// Générateur de secret fort
+const generateJWTSecret = () => {
+  return crypto.randomBytes(64).toString('hex');
+};
+
+// Variables d'environnement recommandées
+const jwtConfig = {
+  accessTokenSecret: process.env.JWT_ACCESS_SECRET,     // 64+ caractères aléatoires
+  refreshTokenSecret: process.env.JWT_REFRESH_SECRET,   // Différent de l'access secret
+  accessTokenExpiry: '15m',                             // Courte durée
+  refreshTokenExpiry: '7d',                             // Durée raisonnable
+  algorithm: 'HS256',                                   // Ou RS256 pour plus de sécurité
+  issuer: process.env.APP_NAME,
+  audience: `${process.env.APP_NAME}-users`
+};
+```
+
+**2. Protection contre les attaques :**
+
+```javascript
+// Protection contre les attaques par timing
+const safeCompare = (a, b) => {
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+};
+
+// Validation stricte des claims
+const validateClaims = (payload) => {
+  const requiredClaims = ['sub', 'iat', 'exp'];
+  const missingClaims = requiredClaims.filter(claim => !payload[claim]);
+  
+  if (missingClaims.length > 0) {
+    throw new Error(`Claims manquants: ${missingClaims.join(', ')}`);
+  }
+
+  // Vérification de la date d'expiration
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp <= now) {
+    throw new Error('Token expiré');
+  }
+
+  // Vérification de la date de début de validité
+  if (payload.nbf && payload.nbf > now) {
+    throw new Error('Token pas encore valide');
+  }
+
+  return true;
+};
+```
+
+#### Comparaison JWT vs Sessions
+
+| Aspect | JWT | Sessions |
+|--------|-----|----------|
+| **Stockage serveur** | ❌ Aucun | ✅ État stocké |
+| **Scalabilité** | ✅ Excellent | ❌ Limité |
+| **Révocation** | ❌ Complexe | ✅ Immédiate |
+| **Taille des données** | ❌ Limite (8KB) | ✅ Illimitée |
+| **Sécurité XSS** | ⚠️ Stockage client | ✅ HttpOnly cookies |
+| **Performance** | ✅ Pas de DB lookup | ❌ Lookup à chaque requête |
+| **Applications distribuées** | ✅ Parfait | ❌ Session sharing complexe |
+
+#### Bonnes pratiques JWT
+
+**✅ À faire :**
+- Utiliser HTTPS obligatoirement
+- Stocker les tokens dans httpOnly cookies (côté web) ou stockage sécurisé (mobile)
+- Implémenter des refresh tokens
+- Utiliser des durées courtes pour les access tokens (15-30 minutes)
+- Valider tous les claims
+- Implémenter une blacklist pour la révocation critique
+- Logger les tentatives d'utilisation de tokens invalides
+
+**❌ À éviter :**
+- Stocker des données sensibles dans le payload
+- Utiliser des secrets faibles ou réutilisés
+- Négliger la validation des claims
+- Oublier la gestion de l'expiration
+- Stocker les tokens dans localStorage (web) - vulnérable aux XSS
+
+```javascript
+// Exemple de bonnes pratiques pour le stockage côté client
+// ✅ Cookies sécurisés (recommandé pour web)
+res.cookie('accessToken', token, {
+  httpOnly: true,      // Pas accessible via JavaScript
+  secure: true,        // HTTPS uniquement
+  sameSite: 'strict',  // Protection CSRF
+  maxAge: 15 * 60 * 1000  // 15 minutes
+});
+
+// ❌ localStorage (vulnérable aux XSS)
+// localStorage.setItem('token', token); // À éviter !
+```
+
+Cette approche complète des JWT permet aux étudiants de comprendre non seulement le fonctionnement technique, mais aussi les implications de sécurité et les meilleures pratiques pour une implémentation robuste en production.
 
 **3. OAuth 2.0 avec Node.js**
 Délégation d'accès via des providers externes (Google, GitHub, Facebook) :
