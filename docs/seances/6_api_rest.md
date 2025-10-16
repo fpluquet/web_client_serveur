@@ -2355,7 +2355,7 @@ Cette implémentation complète démontre tous les concepts RESTful et de sécur
 Testez toutes les routes de l'API en utilisant Jest et Supertest pour assurer la robustesse et la fiabilité de l'application (seules 2 sont testées pour le moment).
 
 ### Exercice 3 : Documentation API
-Créez une documentation complète de votre API en utilisant Swagger/OpenAPI.
+Créez une documentation complète de votre API en utilisant Swagger.
 
 
 
