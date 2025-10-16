@@ -1484,11 +1484,12 @@ Cette architecture garantit :
   "name": "api-restful-nodejs",
   "version": "1.0.0",
   "description": "API RESTful complète avec Node.js et Express",
+  "type": "module",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "test": "jest"
+    "dev": "set ENVIRONMENT=dev && nodemon src/app.js",
+    "test": "set ENVIRONMENT=test && node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -1503,7 +1504,7 @@ Cette architecture garantit :
   "devDependencies": {
     "nodemon": "^3.0.1",
     "jest": "^29.6.4",
-    "supertest": "^6.3.3"
+    "supertest": "^6.3.3" 
   }
 }
 ```
@@ -1514,15 +1515,20 @@ Cette architecture garantit :
 ::: details Configuration principale (src/app.js)
 <!-- @include:start api-project/src/app.js -->
 ```javascript
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import dotenv from 'dotenv';
 
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-const errorHandler = require('./middleware/errorHandler');
+dotenv.config();
+
+console.log('JWT Secret:', process.env.JWT_SECRET);
+console.log('Environment:', process.env.ENVIRONMENT);
+
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import errorHandler from './middleware/errorHandler.js';
 
 const app = express();
 
@@ -1554,11 +1560,12 @@ app.get('/', (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
 });
 
-module.exports = app;
+export { app };
+export const close = () => server.close();
 ```
 <!-- @include:end api-project/src/app.js -->
 :::
@@ -1575,9 +1582,13 @@ Le modèle `User` implémente une interface simple et efficace pour la gestion d
 ::: details src/models/User.js
 <!-- @include:start api-project/src/models/User.js -->
 ```javascript
-const fs = require('fs').promises;
-const path = require('path');
-const bcrypt = require('bcryptjs');
+import fs from 'fs/promises';
+import path from 'path';
+import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 class FileDataStore {
   constructor(filename) {
@@ -1611,6 +1622,7 @@ class FileDataStore {
     await fs.writeFile(this.filePath, JSON.stringify(data, null, 2));
   }
 }
+const filename = process.env.ENVIRONMENT?.trim() === "test" ? "users.test" : "users.prod";
 
 class User {
   constructor(userData) {
@@ -1622,7 +1634,7 @@ class User {
     this.createdAt = userData.createdAt || new Date().toISOString();
   }
 
-  static dataStore = new FileDataStore('users');
+  static dataStore = new FileDataStore(filename);
 
   // Méthode pour hasher le mot de passe
   async hashPassword() {
@@ -1728,7 +1740,7 @@ class User {
   }
 }
 
-module.exports = User;
+export default User;
 ```
 <!-- @include:end api-project/src/models/User.js -->
 :::
@@ -1739,9 +1751,9 @@ module.exports = User;
 ::: details src/controllers/authController.js
 <!-- @include:start api-project/src/controllers/authController.js -->
 ```javascript
-const jwt = require('jsonwebtoken');
-const { validationResult } = require('express-validator');
-const User = require('../models/User');
+import jwt from 'jsonwebtoken';
+import { validationResult } from 'express-validator';
+import User from '../models/User.js';
 
 // Génération du JWT
 const generateToken = (userId) => {
@@ -1751,11 +1763,12 @@ const generateToken = (userId) => {
 };
 
 // Inscription
-exports.register = async (req, res) => {
+export const register = async (req, res) => {
   try {
     // Vérification des erreurs de validation
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.error('Validation errors:', errors.array());
       return res.status(400).json({ 
         success: false,
         errors: errors.array() 
@@ -1801,7 +1814,7 @@ exports.register = async (req, res) => {
 };
 
 // Connexion
-exports.login = async (req, res) => {
+export const login = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -1850,6 +1863,8 @@ exports.login = async (req, res) => {
     });
   }
 };
+
+export default { register, login };
 ```
 <!-- @include:end api-project/src/controllers/authController.js -->
 :::
@@ -1857,11 +1872,11 @@ exports.login = async (req, res) => {
 ::: details src/controllers/userController.js
 <!-- @include:start api-project/src/controllers/userController.js -->
 ```javascript
-const User = require('../models/User');
-const { validationResult } = require('express-validator');
+import User from '../models/User.js';
+import { validationResult } from 'express-validator';
 
 // Obtenir le profil utilisateur
-exports.getProfile = async (req, res) => {
+export const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -1885,7 +1900,7 @@ exports.getProfile = async (req, res) => {
 };
 
 // Mettre à jour le profil utilisateur
-exports.updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -1945,7 +1960,7 @@ exports.updateProfile = async (req, res) => {
 };
 
 // Obtenir la liste des utilisateurs (admin seulement)
-exports.getUsers = async (req, res) => {
+export const getUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -1982,6 +1997,9 @@ exports.getUsers = async (req, res) => {
     });
   }
 };
+
+export default { getProfile, updateProfile, getUsers };
+
 ```
 <!-- @include:end api-project/src/controllers/userController.js -->
 :::
@@ -1991,8 +2009,8 @@ exports.getUsers = async (req, res) => {
 ::: details src/middleware/auth.js
 <!-- @include:start api-project/src/middleware/auth.js -->
 ```javascript
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -2047,7 +2065,7 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-module.exports = authMiddleware;
+export default authMiddleware;
 ```
 <!-- @include:end api-project/src/middleware/auth.js -->
 
@@ -2055,10 +2073,10 @@ module.exports = authMiddleware;
 ::: details src/middleware/validation.js
 <!-- @include:start api-project/src/middleware/validation.js -->
 ```javascript
-const { body } = require('express-validator');
+import { body } from 'express-validator';
 
 // Validation pour l'inscription
-exports.registerValidation = [
+export const registerValidation = [
   body('username')
     .isLength({ min: 3 })
     .withMessage('Le nom d\'utilisateur doit contenir au moins 3 caractères')
@@ -2067,8 +2085,7 @@ exports.registerValidation = [
 
   body('email')
     .isEmail()
-    .withMessage('Email invalide')
-    .normalizeEmail(),
+    .withMessage('Email invalide'),
 
   body('password')
     .isLength({ min: 6 })
@@ -2078,7 +2095,7 @@ exports.registerValidation = [
 ];
 
 // Validation pour la connexion
-exports.loginValidation = [
+export const loginValidation = [
   body('email')
     .isEmail()
     .withMessage('Email invalide')
@@ -2090,7 +2107,7 @@ exports.loginValidation = [
 ];
 
 // Validation pour la mise à jour du profil
-exports.updateProfileValidation = [
+export const updateProfileValidation = [
   body('username')
     .optional()
     .isLength({ min: 3 })
@@ -2145,7 +2162,7 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-module.exports = errorHandler;
+export default errorHandler;
 ```
 <!-- @include:end api-project/src/middleware/errorHandler.js -->
 :::
@@ -2153,7 +2170,7 @@ module.exports = errorHandler;
 ::: details src/middleware/admin.js
 <!-- @include:start api-project/src/middleware/admin.js -->
 ```javascript
-const User = require('../models/User');
+import User from '../models/User.js';
 
 // Middleware pour vérifier les rôles d'administrateur
 const adminMiddleware = async (req, res, next) => {
@@ -2189,7 +2206,7 @@ const adminMiddleware = async (req, res, next) => {
   }
 };
 
-module.exports = adminMiddleware;
+export default adminMiddleware;
 ```
 <!-- @include:end api-project/src/middleware/admin.js -->
 :::
@@ -2199,10 +2216,11 @@ module.exports = adminMiddleware;
 ::: details src/routes/authRoutes.js
 <!-- @include:start api-project/src/routes/authRoutes.js -->
 ```javascript
-const express = require('express');
+import express from 'express';
+import authController from '../controllers/authController.js';
+import { registerValidation, loginValidation } from '../middleware/validation.js';
+
 const router = express.Router();
-const authController = require('../controllers/authController');
-const { registerValidation, loginValidation } = require('../middleware/validation');
 
 // POST /api/auth/register - Inscription
 router.post('/register', registerValidation, authController.register);
@@ -2210,7 +2228,7 @@ router.post('/register', registerValidation, authController.register);
 // POST /api/auth/login - Connexion
 router.post('/login', loginValidation, authController.login);
 
-module.exports = router;
+export default router;
 ```
 <!-- @include:end api-project/src/routes/authRoutes.js -->
 :::
@@ -2218,12 +2236,13 @@ module.exports = router;
 ::: details src/routes/userRoutes.js
 <!-- @include:start api-project/src/routes/userRoutes.js -->
 ```javascript
-const express = require('express');
+import express from 'express';
+import userController from '../controllers/userController.js';
+import authMiddleware from '../middleware/auth.js';
+import adminMiddleware from '../middleware/admin.js';
+import { updateProfileValidation } from '../middleware/validation.js';
+
 const router = express.Router();
-const userController = require('../controllers/userController');
-const authMiddleware = require('../middleware/auth');
-const adminMiddleware = require('../middleware/admin');
-const { updateProfileValidation } = require('../middleware/validation');
 
 // GET /api/users/profile - Obtenir son profil (utilisateur connecté)
 router.get('/profile', authMiddleware, userController.getProfile);
@@ -2234,7 +2253,7 @@ router.put('/profile', authMiddleware, updateProfileValidation, userController.u
 // GET /api/users - Obtenir la liste des utilisateurs (admin seulement)
 router.get('/', authMiddleware, adminMiddleware, userController.getUsers);
 
-module.exports = router;
+export default router;
 ```
 <!-- @include:end api-project/src/routes/userRoutes.js -->
 :::
@@ -2244,8 +2263,15 @@ module.exports = router;
 ::: details tests/api.test.js
 <!-- @include:start api-project/tests/api.test.js -->
 ```javascript
-const request = require('supertest');
-const app = require('../src/app');
+import request from 'supertest';
+import { app, close } from '../src/app.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 describe('API Tests', () => {
   describe('GET /', () => {
@@ -2294,6 +2320,23 @@ describe('API Tests', () => {
       expect(res.body).toHaveProperty('errors');
     });
   });
+});
+
+afterEach(() => {
+  // delete test database file before running tests
+  const testDbPath = path.join(__dirname, '..', 'src', 'data', 'users.test.json');
+  console.log('Deleting test database file:', testDbPath);
+  if (fs.existsSync(testDbPath)) {
+    fs.unlinkSync(testDbPath);
+  }
+});
+
+afterAll(() => {
+  console.log('All tests done, cleaning up...', close);
+  // kill the app server after tests
+  if (app && close) {
+    close();
+  }
 });
 ```
 <!-- @include:end api-project/tests/api.test.js -->
