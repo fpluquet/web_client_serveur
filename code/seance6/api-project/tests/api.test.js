@@ -1,5 +1,12 @@
-const request = require('supertest');
-const app = require('../src/app');
+import request from 'supertest';
+import { app, close } from '../src/app.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 describe('API Tests', () => {
   describe('GET /', () => {
@@ -48,4 +55,21 @@ describe('API Tests', () => {
       expect(res.body).toHaveProperty('errors');
     });
   });
+});
+
+afterEach(() => {
+  // delete test database file before running tests
+  const testDbPath = path.join(__dirname, '..', 'src', 'data', 'users.test.json');
+  console.log('Deleting test database file:', testDbPath);
+  if (fs.existsSync(testDbPath)) {
+    fs.unlinkSync(testDbPath);
+  }
+});
+
+afterAll(() => {
+  console.log('All tests done, cleaning up...', close);
+  // kill the app server after tests
+  if (app && close) {
+    close();
+  }
 });

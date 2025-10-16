@@ -1,4 +1,4 @@
-const User = require('../models/User');
+import User from '../models/User.js';
 
 // Middleware pour vérifier les rôles d'administrateur
 const adminMiddleware = async (req, res, next) => {
@@ -34,4 +34,4 @@ const adminMiddleware = async (req, res, next) => {
   }
 };
 
-module.exports = adminMiddleware;
+export default adminMiddleware;

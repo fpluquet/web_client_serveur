@@ -1,8 +1,8 @@
-const User = require('../models/User');
-const { validationResult } = require('express-validator');
+import User from '../models/User.js';
+import { validationResult } from 'express-validator';
 
 // Obtenir le profil utilisateur
-exports.getProfile = async (req, res) => {
+export const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -26,7 +26,7 @@ exports.getProfile = async (req, res) => {
 };
 
 // Mettre à jour le profil utilisateur
-exports.updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -86,7 +86,7 @@ exports.updateProfile = async (req, res) => {
 };
 
 // Obtenir la liste des utilisateurs (admin seulement)
-exports.getUsers = async (req, res) => {
+export const getUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -123,3 +123,5 @@ exports.getUsers = async (req, res) => {
     });
   }
 };
+
+export default { getProfile, updateProfile, getUsers };

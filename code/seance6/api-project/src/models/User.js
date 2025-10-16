@@ -1,6 +1,10 @@
-const fs = require('fs').promises;
-const path = require('path');
-const bcrypt = require('bcryptjs');
+import fs from 'fs/promises';
+import path from 'path';
+import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 class FileDataStore {
   constructor(filename) {
@@ -34,6 +38,7 @@ class FileDataStore {
     await fs.writeFile(this.filePath, JSON.stringify(data, null, 2));
   }
 }
+const filename = process.env.ENVIRONMENT?.trim() === "test" ? "users.test" : "users.prod";
 
 class User {
   constructor(userData) {
@@ -45,7 +50,7 @@ class User {
     this.createdAt = userData.createdAt || new Date().toISOString();
   }
 
-  static dataStore = new FileDataStore('users');
+  static dataStore = new FileDataStore(filename);
 
   // Méthode pour hasher le mot de passe
   async hashPassword() {
@@ -151,4 +156,4 @@ class User {
   }
 }
 
-module.exports = User;
+export default User;

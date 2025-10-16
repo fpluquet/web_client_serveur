@@ -1,7 +1,7 @@
-const { body } = require('express-validator');
+import { body } from 'express-validator';
 
 // Validation pour l'inscription
-exports.registerValidation = [
+export const registerValidation = [
   body('username')
     .isLength({ min: 3 })
     .withMessage('Le nom d\'utilisateur doit contenir au moins 3 caractères')
@@ -10,8 +10,7 @@ exports.registerValidation = [
 
   body('email')
     .isEmail()
-    .withMessage('Email invalide')
-    .normalizeEmail(),
+    .withMessage('Email invalide'),
 
   body('password')
     .isLength({ min: 6 })
@@ -21,7 +20,7 @@ exports.registerValidation = [
 ];
 
 // Validation pour la connexion
-exports.loginValidation = [
+export const loginValidation = [
   body('email')
     .isEmail()
     .withMessage('Email invalide')
@@ -33,7 +32,7 @@ exports.loginValidation = [
 ];
 
 // Validation pour la mise à jour du profil
-exports.updateProfileValidation = [
+export const updateProfileValidation = [
   body('username')
     .optional()
     .isLength({ min: 3 })

@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import userController from '../controllers/userController.js';
+import authMiddleware from '../middleware/auth.js';
+import adminMiddleware from '../middleware/admin.js';
+import { updateProfileValidation } from '../middleware/validation.js';
+
 const router = express.Router();
-const userController = require('../controllers/userController');
-const authMiddleware = require('../middleware/auth');
-const adminMiddleware = require('../middleware/admin');
-const { updateProfileValidation } = require('../middleware/validation');
 
 // GET /api/users/profile - Obtenir son profil (utilisateur connecté)
 router.get('/profile', authMiddleware, userController.getProfile);
@@ -14,4 +15,4 @@ router.put('/profile', authMiddleware, updateProfileValidation, userController.u
 // GET /api/users - Obtenir la liste des utilisateurs (admin seulement)
 router.get('/', authMiddleware, adminMiddleware, userController.getUsers);
 
-module.exports = router;
+export default router;
