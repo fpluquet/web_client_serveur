@@ -8,6 +8,7 @@ Cette application est un exemple complet d'API RESTful construite avec Node.js, 
 - **Gestion des utilisateurs** : Profils utilisateurs avec rôles
 - **Validation des données** : Validation côté serveur avec express-validator
 - **Sécurité** : Helmet, CORS, limitation du taux de requêtes
+- **Documentation Swagger** : Documentation interactive de l'API
 - **Tests** : Tests unitaires avec Jest et Supertest
 - **Structure modulaire** : Architecture MVC claire
 
@@ -30,6 +31,22 @@ npm run dev
 npm start
 ```
 
+## Documentation Swagger
+
+Une fois le serveur démarré, accédez à la documentation interactive de l'API :
+
+```
+http://localhost:3000/api-docs
+```
+
+La documentation Swagger vous permet de :
+- Visualiser tous les endpoints disponibles
+- Consulter les schémas de requêtes et réponses
+- Tester directement les endpoints depuis votre navigateur
+- Voir des exemples de données
+
+Pour plus de détails, consultez [SWAGGER_DOCUMENTATION.md](./SWAGGER_DOCUMENTATION.md).
+
 ## API Endpoints
 
 ### Authentification
@@ -51,6 +68,7 @@ npm test
 
 ```
 src/
+├── config/          # Configuration (Swagger, etc.)
 ├── controllers/     # Logique métier
 ├── middleware/      # Middlewares personnalisés
 ├── models/          # Modèles de données
