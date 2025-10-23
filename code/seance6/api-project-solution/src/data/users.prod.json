@@ -13,5 +13,13 @@
     "password": "$2a$10$Er1sJfIBiI54HZ2CrmTDTeMCrteZ9m/OSSCCgQtlhVisdozMJly1.",
     "role": "user",
     "createdAt": "2025-10-16T18:53:39.434Z"
+  },
+  {
+    "id": "1761206352715",
+    "username": "pluquetf",
+    "email": "pluquetf@example.com",
+    "password": "$2a$10$h7tpvwctWscyX/RYZqzyz.vLxVO.okzH3IurMYqStgEF0geGKMYkC",
+    "role": "user",
+    "createdAt": "2025-10-23T07:59:12.715Z"
   }
 ]

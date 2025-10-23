@@ -26,11 +26,13 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limite chaque IP à 100 requêtes par windowMs
 });
-app.use(limiter);
+app.use(limiter); 
 
 // Middleware pour parser JSON
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+app.use(express.static('src/public'));
 
 // Documentation Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -46,9 +48,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
 // Route de base
-app.get('/', (req, res) => {
-  res.json({ message: 'API RESTful avec Node.js et Express' });
-});
+
 
 // Middleware de gestion d'erreurs
 app.use(errorHandler);
