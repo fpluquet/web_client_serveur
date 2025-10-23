@@ -1,25 +1,10 @@
 [
   {
-    "id": "1760608802079",
-    "username": "testuser",
-    "email": "test@example.com",
-    "role": "user",
-    "createdAt": "2025-10-16T10:00:02.079Z"
-  },
-  {
-    "id": "1760640819434",
-    "username": "johndoe",
+    "id": "1761209553407",
+    "username": "janedoe",
     "email": "john@example.com",
-    "password": "$2a$10$Er1sJfIBiI54HZ2CrmTDTeMCrteZ9m/OSSCCgQtlhVisdozMJly1.",
+    "password": "$2a$10$ZyOT73LH6Y5e/B3e9Nv8GuTBT8DlEcYcDtOwCZyd8zPvLoUsGGyYi",
     "role": "user",
-    "createdAt": "2025-10-16T18:53:39.434Z"
-  },
-  {
-    "id": "1761206352715",
-    "username": "pluquetf",
-    "email": "pluquetf@example.com",
-    "password": "$2a$10$h7tpvwctWscyX/RYZqzyz.vLxVO.okzH3IurMYqStgEF0geGKMYkC",
-    "role": "user",
-    "createdAt": "2025-10-23T07:59:12.715Z"
+    "createdAt": "2025-10-23T08:52:33.407Z"
   }
 ]

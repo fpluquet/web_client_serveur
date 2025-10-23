@@ -1,0 +1,133 @@
+@baseUrl = http://localhost:3000
+@token = 
+
+# =============================================================================
+# AUTHENTIFICATION - Routes de connexion et inscription
+# =============================================================================
+
+### 1. Inscription d'un nouvel utilisateur
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "Password123!"
+}
+
+### 2. Inscription avec un email déjà existant (erreur)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "janedoe",
+  "email": "john@example.com",
+  "password": "Password123!"
+}
+
+### 3. Connexion d'un utilisateur (valide)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "Password123!"
+}
+
+### 4. Connexion avec identifiants incorrects
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "WrongPassword"
+}
+
+# =============================================================================
+# PROFIL UTILISATEUR - Opérations sur le profil
+# =============================================================================
+
+### 5. Récupérer son profil (authentification requise)
+GET {{baseUrl}}/api/users/profile
+Authorization: Bearer {{token}}
+
+### 6. Mettre à jour son profil
+PUT {{baseUrl}}/api/users/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "johndoe_updated",
+  "email": "john.updated@example.com"
+}
+
+### 7. Changer le mot de passe
+PUT {{baseUrl}}/api/users/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "Password123!",
+  "newPassword": "NewPassword456!"
+}
+
+### 8. Changer le mot de passe avec ancien mot de passe incorrect
+PUT {{baseUrl}}/api/users/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "WrongPassword",
+  "newPassword": "NewPassword456!"
+}
+
+# =============================================================================
+# GESTION DES UTILISATEURS - Routes admin
+# =============================================================================
+
+### 9. Obtenir la liste de tous les utilisateurs (Admin uniquement)
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+
+### 10. Obtenir la liste des utilisateurs avec pagination (page 1, limit 5)
+GET {{baseUrl}}/api/users?page=1&limit=5
+Authorization: Bearer {{token}}
+
+### 11. Obtenir la page 2 des utilisateurs
+GET {{baseUrl}}/api/users?page=2&limit=5
+Authorization: Bearer {{token}}
+
+# =============================================================================
+# TESTS D'ERREUR
+# =============================================================================
+
+### 12. Accès sans token (erreur 401)
+GET {{baseUrl}}/api/users/profile
+
+### 13. Accès admin sans permissions (erreur 403)
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+
+# =============================================================================
+# VALIDATION DES DONNÉES
+# =============================================================================
+
+### 14. Inscription avec email invalide
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "invalid-email",
+  "password": "Password123!"
+}
+
+### 15. Inscription avec mot de passe trop court
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "short"
+}
