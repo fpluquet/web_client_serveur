@@ -42,6 +42,7 @@ Vous serez amené à :
 9. Tests et bonnes pratiques
 10. Progressive Web Apps (PWA) et architectures modernes
 11. Conclusion et perspectives
+12. Préparation à l'examen final
 
 Ce cours est conçu pour être progressif, pratique et interactif. Vous alternerez entre théorie, démonstrations, exercices et projets concrets.
 

@@ -97,6 +97,8 @@ export default withMermaid(
               { text: "Sécurité", link: "/seances/9_securite" },
               { text: "Progressive Web App", link: "/seances/10_pwa" },
               { text: "Conclusion", link: "/seances/11_conclusion" },
+              { text: " " },
+              { text: "Préparation à l'examen final", link: "/seances/12_preparation_examen" },
             ],
           },
         ],
