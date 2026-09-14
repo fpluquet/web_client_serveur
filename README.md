@@ -1,4 +1,4 @@
-# Cours Web BA2 - Syllabus 2025-2026
+# Cours Web BA2 - Syllabus
 
 Ce dépôt contient le syllabus complet du cours Web Bachelor 2 de la Haute École Louvain en Hainaut.
 
