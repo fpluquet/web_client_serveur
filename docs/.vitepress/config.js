@@ -106,7 +106,7 @@ export default withMermaid(
       // Pied de page
       footer: {
         message: "Syllabus créé par Prof. Frédéric Pluquet",
-        copyright: "Copyright © 2025-2026 HELHa",
+        copyright: "Copyright © HELHa",
       },
 
       // Options de recherche
