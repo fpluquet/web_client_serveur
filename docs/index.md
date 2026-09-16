@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: "Cours Web BA2"
-  text: "Syllabus 2025-2026"
+  text: "Syllabus"
   tagline: HELHa - Bachelor en informatique de gestion
   actions:
     - theme: brand
