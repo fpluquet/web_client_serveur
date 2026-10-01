@@ -120,11 +120,9 @@ class User {
    * Trouve un utilisateur par id et applique les mises à jour.
    * @param {string} id
    * @param {object} updates
-   * @param {object} [options]
-   * @param {boolean} [options.new=false] Si true, retourne le document après update ;
-   *   sinon retourne le document tel qu’il était avant (comportement Mongoose).
+   * @returns {Promise<object|null>} Le document mis à jour, ou null si introuvable
    */
-  static async findByIdAndUpdate(id, updates, options = {}) {
+  static async findByIdAndUpdate(id, updates) {
     const users = await User.dataStore.readData();
     const userIndex = users.findIndex(user => user.id === id);
     
@@ -132,10 +130,9 @@ class User {
       return null;
     }
     
-    const previous = { ...users[userIndex] };
-    users[userIndex] = { ...previous, ...updates };
+    users[userIndex] = { ...users[userIndex], ...updates };
     await User.dataStore.writeData(users);
-    return options.new ? users[userIndex] : previous;
+    return users[userIndex];
   }
 
   // Trouver tous les utilisateurs avec pagination

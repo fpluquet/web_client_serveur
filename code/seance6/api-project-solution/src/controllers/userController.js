@@ -60,11 +60,7 @@ export const updateProfile = async (req, res) => {
     }
 
     // Mettre à jour l'utilisateur
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { username, email },
-      { new: true, runValidators: true }
-    );
+    const updatedUser = await User.findByIdAndUpdate(userId, { username, email });
 
     if (!updatedUser) {
       return res.status(404).json({
