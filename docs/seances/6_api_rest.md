@@ -1674,30 +1674,12 @@ class User {
     return this;
   }
 
-  // Trouver un utilisateur par critères
+  // Trouver un utilisateur par critères (égalité exacte sur chaque champ)
   static async findOne(criteria) {
     const users = await User.dataStore.readData();
-    
-    return users.find(user => {
-      if (criteria.$or) {
-        return criteria.$or.some(condition => {
-          return Object.keys(condition).every(key => 
-            user[key] === condition[key]
-          );
-        });
-      }
-      
-      if (criteria._id && criteria._id.$ne) {
-        return Object.keys(criteria).every(key => {
-          if (key === '_id') return user.id !== criteria._id.$ne;
-          return user[key] === criteria[key];
-        });
-      }
-      
-      return Object.keys(criteria).every(key => 
-        user[key] === criteria[key]
-      );
-    });
+    return users.find(user =>
+      Object.keys(criteria).every(key => user[key] === criteria[key])
+    );
   }
 
   // Trouver un utilisateur par ID
@@ -1779,11 +1761,10 @@ export const register = async (req, res) => {
     const { username, email, password } = req.body;
 
     // Vérifier si l'utilisateur existe déjà
-    const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
-    });
+    const existingByEmail = await User.findOne({ email });
+    const existingByUsername = await User.findOne({ username });
 
-    if (existingUser) {
+    if (existingByEmail || existingByUsername) {
       return res.status(400).json({
         success: false,
         message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
@@ -1914,17 +1895,19 @@ export const updateProfile = async (req, res) => {
     const { username, email } = req.body;
     const userId = req.user.userId;
 
-    // Vérifier si le nouvel email ou username existe déjà
-    if (email || username) {
-      const existingUser = await User.findOne({
-        _id: { $ne: userId },
-        $or: [
-          email && { email },
-          username && { username }
-        ].filter(Boolean)
-      });
-
-      if (existingUser) {
+    // Vérifier si le nouvel email ou username existe déjà (chez un autre utilisateur)
+    if (email) {
+      const existing = await User.findOne({ email });
+      if (existing && existing.id !== userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
+        });
+      }
+    }
+    if (username) {
+      const existing = await User.findOne({ username });
+      if (existing && existing.id !== userId) {
         return res.status(400).json({
           success: false,
           message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'

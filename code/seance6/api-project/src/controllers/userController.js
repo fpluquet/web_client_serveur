@@ -39,17 +39,19 @@ export const updateProfile = async (req, res) => {
     const { username, email } = req.body;
     const userId = req.user.userId;
 
-    // Vérifier si le nouvel email ou username existe déjà
-    if (email || username) {
-      const existingUser = await User.findOne({
-        _id: { $ne: userId },
-        $or: [
-          email && { email },
-          username && { username }
-        ].filter(Boolean)
-      });
-
-      if (existingUser) {
+    // Vérifier si le nouvel email ou username existe déjà (chez un autre utilisateur)
+    if (email) {
+      const existing = await User.findOne({ email });
+      if (existing && existing.id !== userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
+        });
+      }
+    }
+    if (username) {
+      const existing = await User.findOne({ username });
+      if (existing && existing.id !== userId) {
         return res.status(400).json({
           success: false,
           message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'

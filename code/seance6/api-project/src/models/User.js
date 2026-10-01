@@ -90,30 +90,12 @@ class User {
     return this;
   }
 
-  // Trouver un utilisateur par critères
+  // Trouver un utilisateur par critères (égalité exacte sur chaque champ)
   static async findOne(criteria) {
     const users = await User.dataStore.readData();
-    
-    return users.find(user => {
-      if (criteria.$or) {
-        return criteria.$or.some(condition => {
-          return Object.keys(condition).every(key => 
-            user[key] === condition[key]
-          );
-        });
-      }
-      
-      if (criteria._id && criteria._id.$ne) {
-        return Object.keys(criteria).every(key => {
-          if (key === '_id') return user.id !== criteria._id.$ne;
-          return user[key] === criteria[key];
-        });
-      }
-      
-      return Object.keys(criteria).every(key => 
-        user[key] === criteria[key]
-      );
-    });
+    return users.find(user =>
+      Object.keys(criteria).every(key => user[key] === criteria[key])
+    );
   }
 
   // Trouver un utilisateur par ID
