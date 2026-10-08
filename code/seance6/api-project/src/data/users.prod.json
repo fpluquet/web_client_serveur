@@ -1,9 +1,10 @@
 [
   {
-    "id": "1760608802079",
-    "username": "testuser",
-    "email": "test@example.com",
+    "id": "1791454825187",
+    "username": "johndoe",
+    "email": "john@example.com",
+    "password": "$2a$10$GgTfdVpCBRQz.e82Yn7wj./BxBwdjwf57qvYVfPVXdO8rBaXjwaPu",
     "role": "user",
-    "createdAt": "2025-10-16T10:00:02.079Z"
+    "createdAt": "2026-10-08T10:20:25.187Z"
   }
 ]

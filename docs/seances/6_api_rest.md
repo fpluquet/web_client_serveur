@@ -1660,14 +1660,24 @@ class User {
   async save() {
     await this.hashPassword();
     const users = await User.dataStore.readData();
+
+    // Objet plain : JSON.stringify appellerait sinon toJSON() et omettrait le password
+    const userToSave = {
+      id: this.id,
+      username: this.username,
+      email: this.email,
+      password: this.password,
+      role: this.role,
+      createdAt: this.createdAt
+    };
     
     // Vérifier si l'utilisateur existe déjà
     const existingIndex = users.findIndex(u => u.id === this.id);
     
     if (existingIndex >= 0) {
-      users[existingIndex] = this;
+      users[existingIndex] = userToSave;
     } else {
-      users.push(this);
+      users.push(userToSave);
     }
     
     await User.dataStore.writeData(users);
@@ -1677,22 +1687,24 @@ class User {
   // Trouver un utilisateur par critères (égalité exacte sur chaque champ)
   static async findOne(criteria) {
     const users = await User.dataStore.readData();
-    return users.find(user =>
+    const userData = users.find(user =>
       Object.keys(criteria).every(key => user[key] === criteria[key])
     );
+    return userData ? new User(userData) : null;
   }
 
   // Trouver un utilisateur par ID
   static async findById(id) {
     const users = await User.dataStore.readData();
-    return users.find(user => user.id === id);
+    const userData = users.find(user => user.id === id);
+    return userData ? new User(userData) : null;
   }
 
   /**
    * Trouve un utilisateur par id et applique les mises à jour.
    * @param {string} id
    * @param {object} updates
-   * @returns {Promise<object|null>} Le document mis à jour, ou null si introuvable
+   * @returns {Promise<User|null>} Le document mis à jour, ou null si introuvable
    */
   static async findByIdAndUpdate(id, updates) {
     const users = await User.dataStore.readData();
@@ -1704,7 +1716,7 @@ class User {
     
     users[userIndex] = { ...users[userIndex], ...updates };
     await User.dataStore.writeData(users);
-    return users[userIndex];
+    return new User(users[userIndex]);
   }
 
   // Trouver tous les utilisateurs avec pagination

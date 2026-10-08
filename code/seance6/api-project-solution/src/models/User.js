@@ -120,7 +120,7 @@ class User {
    * Trouve un utilisateur par id et applique les mises à jour.
    * @param {string} id
    * @param {object} updates
-   * @returns {Promise<object|null>} Le document mis à jour, ou null si introuvable
+   * @returns {Promise<User|null>} Le document mis à jour, ou null si introuvable
    */
   static async findByIdAndUpdate(id, updates) {
     const users = await User.dataStore.readData();
@@ -132,7 +132,7 @@ class User {
     
     users[userIndex] = { ...users[userIndex], ...updates };
     await User.dataStore.writeData(users);
-    return users[userIndex];
+    return new User(users[userIndex]);
   }
 
   // Trouver tous les utilisateurs avec pagination

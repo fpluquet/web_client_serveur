@@ -10,3 +10,10 @@ docs/.vitepress/dist
 .vscode/
 */package-lock.json
 */.DS_Store
+*/yarn.lock
+*/package-lock.json
+*/npm-debug.log
+*/.vscode/
+*/.idea/
+**/yarn.lock
+code/seance6/api-project/yarn.lock

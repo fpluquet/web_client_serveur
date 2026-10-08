@@ -1,0 +1,234 @@
+@baseUrl = http://localhost:3000
+@token = 
+
+# Après register ou login, copier data.token dans @token ci-dessus.
+# Pour tester les routes admin : dans le JSON des utilisateurs, passer role à "admin",
+# puis se reconnecter et mettre à jour @token.
+
+# =============================================================================
+# RACINE
+# =============================================================================
+###
+GET {{baseUrl}}/
+
+# =============================================================================
+# AUTHENTIFICATION
+# =============================================================================
+
+HTTP/1.1 200  - OK
+content-security-policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=15552000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 99
+date: Thu, 08 Oct 2026 10:09:36 GMT
+x-ratelimit-reset: 1791454667
+content-type: application/json; charset=utf-8
+content-length: 49
+etag: W/"31-a/QWh43LCRZaYOY52ESt2HEhMKM"
+connection: close
+###
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "Password123"
+}
+
+HTTP/1.1 201  - Created
+content-security-policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=15552000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 96
+date: Thu, 08 Oct 2026 10:20:25 GMT
+x-ratelimit-reset: 1791455272
+content-type: application/json; charset=utf-8
+content-length: 328
+etag: W/"148-e6Hsi2D74Yz3sbahA7xKAi6W2xk"
+connection: close
+###
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "janedoe",
+  "email": "john@example.com",
+  "password": "Password123"
+}
+###
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "Password123"
+}
+
+HTTP/1.1 200  - OK
+content-security-policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=15552000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 99
+date: Thu, 08 Oct 2026 10:20:30 GMT
+x-ratelimit-reset: 1791455727
+content-type: application/json; charset=utf-8
+content-length: 328
+etag: W/"148-Z3KOxECKiDH7lhJLM/MdCDz6KXg"
+connection: close
+###
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "WrongPassword"
+}
+
+# =============================================================================
+# PROFIL UTILISATEUR (Bearer requis)
+# =============================================================================
+
+HTTP/1.1 401  - Unauthorized
+content-security-policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=15552000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 99
+date: Thu, 08 Oct 2026 10:20:00 GMT
+x-ratelimit-reset: 1791455272
+content-type: application/json; charset=utf-8
+content-length: 52
+etag: W/"34-BE4f2FsQt94lc4UmyXaNu8fjII8"
+connection: close
+###
+GET {{baseUrl}}/api/users/profile
+Authorization: Bearer {{token}}
+
+HTTP/1.1 200  - OK
+content-security-policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=15552000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 97
+date: Thu, 08 Oct 2026 10:27:25 GMT
+x-ratelimit-reset: 1791455727
+content-type: application/json; charset=utf-8
+content-length: 147
+etag: W/"93-4t3BqqAHD5mqNVyeJaRN+tg+2t0"
+connection: close
+###
+PUT {{baseUrl}}/api/users/profile
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "johndoe_updated",
+  "email": "john.updated@example.com"
+}
+
+# =============================================================================
+# ADMIN — liste des utilisateurs (Bearer + role admin)
+# =============================================================================
+###
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+###
+GET {{baseUrl}}/api/users?page=1&limit=5
+Authorization: Bearer {{token}}
+###
+GET {{baseUrl}}/api/users?page=2&limit=5
+Authorization: Bearer {{token}}
+
+# =============================================================================
+# ERREURS D'ACCÈS
+# =============================================================================
+###
+GET {{baseUrl}}/api/users/profile
+###
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{token}}
+
+# =============================================================================
+# VALIDATION DES DONNÉES
+# =============================================================================
+###
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "invalid-email",
+  "password": "Password123"
+}
+###
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "short"
+}
+###
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "ab",
+  "email": "shortname@example.com",
+  "password": "Password123"
+}
