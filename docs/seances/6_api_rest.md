@@ -1924,8 +1924,11 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    // Mettre à jour l'utilisateur
-    const updatedUser = await User.findByIdAndUpdate(userId, { username, email });
+    // Ne passer que les champs fournis (évite d'écraser avec undefined)
+    const updates = {};
+    if (username !== undefined) updates.username = username;
+    if (email !== undefined) updates.email = email;
+    const updatedUser = await User.findByIdAndUpdate(userId, updates);
 
     if (!updatedUser) {
       return res.status(404).json({
@@ -1961,8 +1964,8 @@ export const getUsers = async (req, res) => {
         const { password, ...userWithoutPassword } = user;
         return userWithoutPassword;
       })
-      .slice(skip, skip + limit)
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(skip, skip + limit);
 
     const total = await User.countDocuments();
 
@@ -2074,7 +2077,8 @@ export const registerValidation = [
 
   body('email')
     .isEmail()
-    .withMessage('Email invalide'),
+    .withMessage('Email invalide')
+    .normalizeEmail(),
 
   body('password')
     .isLength({ min: 6 })

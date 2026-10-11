@@ -10,7 +10,8 @@ export const registerValidation = [
 
   body('email')
     .isEmail()
-    .withMessage('Email invalide'),
+    .withMessage('Email invalide')
+    .normalizeEmail(),
 
   body('password')
     .isLength({ min: 6 })
