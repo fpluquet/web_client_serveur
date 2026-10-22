@@ -40,72 +40,72 @@ Ce cours complet de développement web backend vous permettra de maîtriser les 
 
 ### 🏗️ **Fondements de l'Architecture Web**
 
-**Séance 1 : Architecture Client-Serveur et HTTP**
+**Chapitre 1 : Architecture Client-Serveur et HTTP**
 - Concepts fondamentaux client-serveur
 - Protocole HTTP et ses méthodes
 - Communication réseau et modèles de données
 
-**Séance 2 : Client Léger vs Client Lourd**
+**Chapitre 2 : Client Léger vs Client Lourd**
 - Comparaison des approches architecturales
 - Avantages et inconvénients de chaque modèle
 - Choix technologiques selon le contexte
 
 ### 🚀 **Technologies Backend**
 
-**Séance 3 : Node.js et l'Écosystème npm**
+**Chapitre 3 : Node.js et l'Écosystème npm**
 - Environnement d'exécution JavaScript côté serveur
 - Modèle asynchrone et événementiel
 - Gestion des packages avec npm
 
-**Séance 4 : Serveurs Web avec Express.js**
+**Chapitre 4 : Serveurs Web avec Express.js**
 - Framework Express pour Node.js
 - Routing et middleware
 - Gestion des requêtes et réponses HTTP
 
-**Séance 5 : Architecture Client Lourd et SPA**
+**Chapitre 5 : Architecture Client Lourd et SPA**
 - Single Page Applications (SPA)
 - JavaScript vanilla pour applications client-lourd
 - Gestion de l'état côté client
 
 ### 🔌 **APIs et Données**
 
-**Séance 6 : APIs RESTful**
+**Chapitre 6 : APIs RESTful**
 - Principes et contraintes REST
 - Conception d'APIs robustes
 - Codes de statut HTTP et bonnes pratiques
 
-**Séance 7 : Gestion des Données et Bases de Données**
+**Chapitre 7 : Gestion des Données et Bases de Données**
 - Interaction avec les bases de données
 - Pattern MVC (Modèle-Vue-Contrôleur)
 - ORM/ODM et requêtes optimisées
 
 ### 🛡️ **Qualité et Sécurité**
 
-**Séance 8 : Tests et Qualité du Code**
+**Chapitre 8 : Tests et Qualité du Code**
 - Stratégies de test (unitaires, intégration, E2E)
 - Pyramide des tests
 - Outils de test pour Node.js
 
-**Séance 9 : Sécurité des Applications Web**
+**Chapitre 9 : Sécurité des Applications Web**
 - Vulnérabilités courantes (OWASP Top 10)
 - Authentification et autorisation
 - Sécurisation des APIs
 
 ### 🌐 **Technologies Avancées**
 
-**Séance 10 : Progressive Web Apps (PWA)**
+**Chapitre 10 : Progressive Web Apps (PWA)**
 - Concepts et caractéristiques des PWA
 - Service Workers et cache
 - Expérience utilisateur native sur le web
 
-**Séance 11 : Conclusion et Perspectives**
+**Chapitre 11 : Conclusion et Perspectives**
 - Synthèse des compétences acquises
 - Tendances et évolutions du développement web
 - Préparation aux projets professionnels
 
 ## Structure pédagogique
 
-Chaque séance suit une approche progressive structurée en trois parties :
+Chaque chapitre suit une approche progressive structurée en trois parties :
 
 1. **🎓 Théorie** : Concepts fondamentaux et principes théoriques
 2. **💻 Application** : Exemples pratiques en Node.js/Express (et PHP en complément)

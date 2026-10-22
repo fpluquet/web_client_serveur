@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-Dans cette séance, nous allons apprendre à créer des serveurs web en utilisant Node.js et le framework Express.js. Nous explorerons comment créer des applications web côté serveur qui implémentent l'architecture client léger vue précédemment.
+Dans ce chapitre, nous allons apprendre à créer des serveurs web en utilisant Node.js et le framework Express.js. Nous explorerons comment créer des applications web côté serveur qui implémentent l'architecture client léger vue précédemment.
 
 ## 2. Prérequis
 

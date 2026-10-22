@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Les tests sont essentiels dans le développement web pour garantir la qualité, la fiabilité et les performances des applications. Cette séance couvre les différents types de tests applicables au développement web.
+Les tests sont essentiels dans le développement web pour garantir la qualité, la fiabilité et les performances des applications. Ce chapitre couvre les différents types de tests applicables au développement web.
 
 ## Types de Tests
 

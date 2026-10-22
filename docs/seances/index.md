@@ -39,7 +39,7 @@ Vous serez amené à :
 6. Conception d’APIs RESTful (architecture en couches, JWT de base)
 7. Introduction aux bases de données
 8. Tests et bonnes pratiques
-9. Sécurité des applications web (approfondissement)
+9. [Sécurité des applications web](./9_securite/) (approfondissement)
 10. Progressive Web Apps (PWA) et architectures modernes
 11. Conclusion et perspectives
 12. Préparation à l'examen final

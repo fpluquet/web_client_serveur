@@ -1,8 +1,8 @@
 # APIs RESTful avec Node.js et Express
 
-## Objectifs et carte de la séance
+## Objectifs et carte du chapitre
 
-Dans cette séance, vous apprenez à **concevoir et construire une API REST** avec Express :
+Dans ce chapitre, vous apprenez à **concevoir et construire une API REST** avec Express :
 
 1. Principes REST (ressources, méthodes, codes de statut)
 2. Authentification **minimale** pour une API (JWT)
@@ -11,9 +11,9 @@ Dans cette séance, vous apprenez à **concevoir et construire une API REST** av
 5. Hygiène de l’API : validation, erreurs, rate limiting
 6. Exercices
 
-::: tip Sécurité avancée → séance 9
+::: tip Sécurité avancée → chapitre Sécurité
 Ici on pose le **minimum** pour faire tourner une API authentifiée.
-Pour HTTPS, Helmet/CSP, CORS avancé, sessions cookies, refresh tokens, menaces OWASP, etc. : voir la [séance 9 — Sécurité](./9_securite.md).
+Pour HTTPS, Helmet/CSP, CORS avancé, sessions cookies, refresh tokens, menaces OWASP, etc. : voir le [chapitre Sécurité](./9_securite/).
 :::
 
 ---
@@ -83,7 +83,7 @@ Utile pour l’évolutivité, mais **rarement implémenté complètement** dans 
 - **Authentification** : *Qui êtes-vous ?* (vérifier l’identité)
 - **Autorisation** : *Que pouvez-vous faire ?* (permissions / rôles)
 
-Approfondissement : [séance 9 § Authentication et autorisation](./9_securite.md#auth).
+Approfondissement : [chapitre Sécurité — Authentication et autorisation](./9_securite/auth#auth).
 
 ### 2.2 Pourquoi le JWT pour une API REST ?
 
@@ -103,7 +103,7 @@ Un JWT a trois parties séparées par des points : `header.payload.signature`.
 - **Payload** : claims (`sub`, `exp`, `iat`, rôle, email…) — **encodé en Base64URL, pas chiffré** : ne jamais y mettre de secrets
 - **Signature** : garantit l’intégrité avec une clé secrète
 
-Le détail (encodage vs chiffrement, calcul HMAC, JWS / JWE) est développé en [séance 9 — Anatomie technique d’un JWT](./9_securite.md#jwt-internals).
+Le détail (encodage vs chiffrement, calcul HMAC, JWS / JWE) est développé dans le [chapitre Sécurité — Anatomie technique d’un JWT](./9_securite/auth#jwt-internals).
 
 ### 2.4 Génération et vérification (essentiel)
 
@@ -137,15 +137,15 @@ const authMiddleware = (req, res, next) => {
 };
 ```
 
-Dans le projet de cette séance, la génération du JWT vit dans le **service** ; la vérification dans un **middleware**.
+Dans le projet de ce chapitre, la génération du JWT vit dans le **service** ; la vérification dans un **middleware**.
 
-::: tip Pour aller plus loin (séance 9)
-- [Anatomie technique](./9_securite.md#jwt-internals) · [Encodage ≠ chiffrement](./9_securite.md#jwt-encoding) · [JWS / JWE](./9_securite.md#jose)
-- [Configuration JWT stricte](./9_securite.md#jwt-strict) (`issuer` / `audience` / `jti`)
-- [Refresh tokens](./9_securite.md#refresh-tokens)
-- [Stockage JWT : cookie vs localStorage](./9_securite.md#jwt-storage) (et XSS)
-- [HTTPS](./9_securite.md#https) · [Helmet](./9_securite.md#helmet) · [CORS granulaire](./9_securite.md#cors)
-- [Sessions sécurisées](./9_securite.md#sessions)
+::: tip Pour aller plus loin (chapitre Sécurité)
+- [Anatomie technique](./9_securite/auth#jwt-internals) · [Encodage ≠ chiffrement](./9_securite/auth#jwt-encoding) · [JWS / JWE](./9_securite/auth#jose)
+- [Configuration JWT stricte](./9_securite/auth#jwt-strict) (`issuer` / `audience` / `jti`)
+- [Refresh tokens](./9_securite/auth#refresh-tokens)
+- [Stockage JWT : cookie vs localStorage](./9_securite/auth#jwt-storage) (et XSS)
+- [HTTPS](./9_securite/communications#https) · [Helmet](./9_securite/communications#helmet) · [CORS granulaire](./9_securite/communications#cors)
+- [Sessions sécurisées](./9_securite/pratiques#sessions)
 :::
 
 ---
@@ -559,7 +559,7 @@ app.listen(PORT, () => {
 
 API avec JWT, rôles, validation et architecture en couches ([📁 GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance6/api-project)).
 
-Stockage pédagogique en **fichiers JSON** (pas de DB ici — voir [séance 7](./7_db.md)).
+Stockage pédagogique en **fichiers JSON** (pas de DB ici — voir [chapitre Bases de données](./7_db.md)).
 
 #### Structure
 
@@ -1524,7 +1524,7 @@ afterAll(() => {
 
 ## 5. Hygiène d’une API : validation, erreurs, rate limiting
 
-Ces mécanismes protègent l’API au quotidien. Pour la surface d’attaque complète (XSS, CSRF, headers, HTTPS…) : [séance 9](./9_securite.md).
+Ces mécanismes protègent l’API au quotidien. Pour la surface d’attaque complète (XSS, CSRF, headers, HTTPS…) : [chapitre Sécurité](./9_securite/).
 
 ### 5.1 Validation des entrées
 
@@ -1600,7 +1600,7 @@ app.use('/api/auth', authLimiter);
 
 ### Exercice 2 : Tests automatisés
 
-Testez toutes les routes avec Jest et Supertest (seules quelques-unes sont couvertes pour l’instant). Voir aussi la [séance 8 — Tests](./8_tests.md).
+Testez toutes les routes avec Jest et Supertest (seules quelques-unes sont couvertes pour l’instant). Voir aussi le [chapitre Tests](./8_tests.md).
 
 ### Exercice 3 : Documentation API
 

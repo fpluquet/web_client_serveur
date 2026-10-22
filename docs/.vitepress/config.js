@@ -98,7 +98,18 @@ export default withMermaid(
               { text: "APIs RESTful", link: "/seances/6_api_rest" },
               { text: "Base de données", link: "/seances/7_db" },
               { text: "Tests", link: "/seances/8_tests" },
-              { text: "Sécurité", link: "/seances/9_securite" },
+              {
+                text: "Sécurité",
+                collapsed: false,
+                items: [
+                  { text: "Vue d'ensemble", link: "/seances/9_securite/" },
+                  { text: "Vulnérabilités", link: "/seances/9_securite/vulnerabilites" },
+                  { text: "Auth & JWT", link: "/seances/9_securite/auth" },
+                  { text: "Communications", link: "/seances/9_securite/communications" },
+                  { text: "Validation", link: "/seances/9_securite/validation" },
+                  { text: "Pratiques & exercices", link: "/seances/9_securite/pratiques" },
+                ],
+              },
               { text: "Progressive Web App", link: "/seances/10_pwa" },
               { text: "Conclusion", link: "/seances/11_conclusion" },
               { text: " " },
@@ -129,7 +140,7 @@ export default withMermaid(
 
       // Fonctionnalités supplémentaires - Outline dans la colonne de droite
       outline: {
-        level: [2,3], // Affiche les titres de niveau 2 à 6
+        level: [2, 4], // H2–H4 dans « Sur cette page »
         label: "Sur cette page",
       },
 

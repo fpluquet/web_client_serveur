@@ -709,7 +709,7 @@ app.post('/comments', (req, res) => {
 ---
 
 ### Question 59
-Expliquez la stratégie de refresh token *(approfondissement : séance 9)*. Pourquoi utilise-t-on deux tokens (access token et refresh token) au lieu d'un seul JWT à longue durée de vie ? Décrivez le flux complet lorsqu'un access token expire.
+Expliquez la stratégie de refresh token *(approfondissement : chapitre Sécurité)*. Pourquoi utilise-t-on deux tokens (access token et refresh token) au lieu d'un seul JWT à longue durée de vie ? Décrivez le flux complet lorsqu'un access token expire.
 
 ---
 
@@ -770,7 +770,7 @@ app.post('/auth/refresh', async (req, res) => {
 ---
 
 ### Question 61
-Quels sont les différents endroits où un token JWT peut être stocké côté client ? Comparez les avantages et inconvénients de chaque approche en termes de sécurité *(voir séance 9 — [stockage JWT](../seances/9_securite.md#jwt-storage))* :
+Quels sont les différents endroits où un token JWT peut être stocké côté client ? Comparez les avantages et inconvénients de chaque approche en termes de sécurité *(voir chapitre Sécurité — [stockage JWT](./9_securite/auth#jwt-storage))* :
 
 | Stockage | Vulnérable au XSS ? | Vulnérable au CSRF ? |
 |----------|---------------------|----------------------|
