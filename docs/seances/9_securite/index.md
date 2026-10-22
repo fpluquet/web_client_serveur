@@ -89,5 +89,6 @@ La sécurité par conception est une approche proactive qui intègre les consid�
 | [Validation & sanitisation](./validation) | Entrées, XSS, DoS, règles métier |
 | [Pratiques et outils](./pratiques) | Sessions, serveur/client, bonnes pratiques, outils |
 | [Exercices](./exercices) | Auth, XSS, audit, HTTPS |
+| [Conclusion](./conclusion) | Points clés et ressources |
 
 La suite : [Vulnérabilités →](./vulnerabilites)
