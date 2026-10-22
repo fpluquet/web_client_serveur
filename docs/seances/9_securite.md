@@ -1246,6 +1246,68 @@ app.post('/auth/logout', (req, res) => {
 - **Rotation** du refresh token à chaque renouvellement (un token réutilisé = signal de vol)
 - Persister les refresh tokens côté serveur (DB/Redis) pour pouvoir les révoquer
 
+#### Où stocker le JWT côté client ? Cookie vs `localStorage` {#jwt-storage}
+
+Une fois le token émis, le client doit le **conserver** pour les prochaines requêtes. Deux approches dominent — et une idée reçue fréquente mérite d’être corrigée.
+
+##### `localStorage` / `sessionStorage`
+
+```javascript
+localStorage.setItem('accessToken', token);
+// plus tard :
+fetch('/api/profile', {
+  headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+});
+```
+
+- **Avantage** : simple pour une SPA ; pas envoyé automatiquement → peu exposé au CSRF classique.
+- **Inconvénient majeur** : tout script de la page peut lire le token. En cas de **XSS**, l’attaquant fait `localStorage.getItem('accessToken')` et **exfiltre** le JWT vers son serveur. Il pourra ensuite l’utiliser depuis n’importe où jusqu’à expiration.
+
+##### Cookie `HttpOnly` + `Secure` + `SameSite`
+
+```javascript
+res.cookie('accessToken', token, {
+  httpOnly: true,   // inaccessible via document.cookie / JS
+  secure: true,     // HTTPS uniquement
+  sameSite: 'strict', // mitige le CSRF cross-site
+  maxAge: 15 * 60 * 1000
+});
+```
+
+Le navigateur **attache** le cookie aux requêtes vers votre origine. Le JS de la page **ne peut pas lire** la valeur.
+
+- **Avantage** : un XSS ne peut en général **pas voler** le secret pour le rejouer hors du navigateur de la victime.
+- **Contrepartie** : il faut gérer le CSRF (`SameSite`, éventuellement token CSRF) car le cookie part tout seul.
+
+##### Le piège : « cookie HttpOnly = immunité XSS » — faux
+
+Même avec un cookie `HttpOnly`, si un attaquant injecte du JS **sur votre origine**, il peut quand même **agir au nom de la victime** :
+
+```javascript
+// Code malveillant injecté via XSS sur VOTRE site
+fetch('/api/transfer', {
+  method: 'POST',
+  credentials: 'include', // le navigateur envoie le cookie HttpOnly
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ to: 'attaquant', amount: 1000 })
+});
+```
+
+| | `localStorage` | Cookie `HttpOnly` |
+|--|----------------|-------------------|
+| XSS peut **lire** le token | Oui → exfiltration | Non |
+| XSS peut **utiliser** la session (fetch same-origin) | Oui (`Authorization: Bearer …`) | Oui (cookie envoyé auto) |
+| Réutilisation hors navigateur victime | Facile si volé | Difficile |
+| Risque CSRF | Faible (header manuel) | À mitiger (`SameSite`, etc.) |
+
+**En résumé :**
+
+1. Cookie `HttpOnly` = **mieux contre le vol du token**, pas contre l’**abus de session via XSS**.
+2. XSS reste critique dans les deux cas → priorité absolue : **empêcher le XSS** (CSP, sanitization, pas d’HTML non fiable…).
+3. Compromis fréquent en production : **access token court** (parfois seulement en mémoire JS) + **refresh token** en cookie `HttpOnly` / `Secure` / `SameSite`, avec rotation.
+
+`SameSite` protège surtout contre le CSRF **depuis un autre site** ; il ne bloque pas un `fetch` lancé par un XSS **sur votre propre domaine**.
+
 #### Révocation de tokens et blacklist {#jwt-blacklist}
 
 ```javascript

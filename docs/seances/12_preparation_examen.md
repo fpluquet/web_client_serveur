@@ -770,13 +770,15 @@ app.post('/auth/refresh', async (req, res) => {
 ---
 
 ### Question 61
-Quels sont les différents endroits où un token JWT peut être stocké côté client ? Comparez les avantages et inconvénients de chaque approche en termes de sécurité :
+Quels sont les différents endroits où un token JWT peut être stocké côté client ? Comparez les avantages et inconvénients de chaque approche en termes de sécurité *(voir séance 9 — [stockage JWT](../seances/9_securite.md#jwt-storage))* :
 
 | Stockage | Vulnérable au XSS ? | Vulnérable au CSRF ? |
 |----------|---------------------|----------------------|
 | localStorage | ? | ? |
 | sessionStorage | ? | ? |
 | Cookie HttpOnly | ? | ? |
+
+Précisez aussi : en cas de XSS, un cookie `HttpOnly` empêche-t-il *toute* utilisation abusive de la session ? Pourquoi ?
 
 ---
 

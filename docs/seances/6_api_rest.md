@@ -143,6 +143,7 @@ Dans le projet de cette séance, la génération du JWT vit dans le **service** 
 - [Anatomie technique](./9_securite.md#jwt-internals) · [Encodage ≠ chiffrement](./9_securite.md#jwt-encoding) · [JWS / JWE](./9_securite.md#jose)
 - [Configuration JWT stricte](./9_securite.md#jwt-strict) (`issuer` / `audience` / `jti`)
 - [Refresh tokens](./9_securite.md#refresh-tokens)
+- [Stockage JWT : cookie vs localStorage](./9_securite.md#jwt-storage) (et XSS)
 - [HTTPS](./9_securite.md#https) · [Helmet](./9_securite.md#helmet) · [CORS granulaire](./9_securite.md#cors)
 - [Sessions sécurisées](./9_securite.md#sessions)
 :::
