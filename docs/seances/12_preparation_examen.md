@@ -426,7 +426,7 @@ Expliquez pourquoi il est important de valider les données côté serveur même
 Analysez ce code de validation et expliquez ce que fait chaque validateur :
 
 ```javascript
-const { body, validationResult } = require('express-validator');
+import { body, validationResult } from 'express-validator';
 
 app.post('/users',
   body('email').isEmail().normalizeEmail(),
@@ -454,7 +454,7 @@ Qu'est-ce qu'un fichier `.env` et pourquoi est-il utilisé dans les applications
 Analysez ce code et expliquez comment les variables d'environnement sont utilisées :
 
 ```javascript
-require('dotenv').config();
+import 'dotenv/config';
 
 const config = {
   port: process.env.PORT || 3000,
@@ -479,7 +479,7 @@ c) Quel fichier contiendrait les vraies valeurs de ces variables ?
 Expliquez ce que fait le middleware `multer` dans ce code et à quoi servent les différentes options de configuration :
 
 ```javascript
-const multer = require('multer');
+import multer from 'multer';
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -627,22 +627,23 @@ Dans le contexte de la sécurité des cookies, expliquez la différence entre le
 ## 8. Architecture et bonnes pratiques
 
 ### Question 53
-Dans une bonne architecture pour une API Express, quelles sont les responsabilités respectives du Controller et du Model (ou Service) ?
+Dans une bonne architecture pour une API Express, quelles sont les responsabilités respectives du **Controller**, du **Service**, du **Model** et du **Repository** ? Qui orchestre le Model et le Repository ? Pourquoi le Model doit-il rester indépendant ?
 
 ---
 
 ### Question 54
-Quand une bonne architecture pour une API Express, quelles sont les différentes couches par lesquelles une requête passe avant d'atteindre la logique métier ? Décrivez brièvement le rôle de chaque couche (Router, Middleware, Controller, Service, Model).
+Dans une bonne architecture pour une API Express, quelles sont les différentes couches par lesquelles une requête passe ? Décrivez brièvement le rôle de chaque couche et les dépendances (Router → Middleware → Controller → Service → Repository/Model).
 ---
 
 ### Question 55
-Analysez cette structure de projet et identifiez à quoi sert chaque dossier :
+Analysez cette structure de projet et identifiez à quoi sert chaque dossier. Précisez qui appelle qui (`controllers/` → `services/` → …) :
 
 ```
 src/
 ├── controllers/
 ├── middleware/
 ├── models/
+├── repositories/
 ├── routes/
 ├── services/
 └── utils/
@@ -656,7 +657,7 @@ src/
 Qu'est-ce que le rate limiting et pourquoi est-il important pour la sécurité d'une API ? Analysez ce code et expliquez ce qu'il fait :
 
 ```javascript
-const rateLimit = require('express-rate-limit');
+import rateLimit from 'express-rate-limit';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -687,7 +688,7 @@ Qu'est-ce que la sanitization des données et pourquoi est-elle complémentaire 
 Analysez ce code de sanitization et expliquez ce que fait chaque ligne :
 
 ```javascript
-const sanitizeHtml = require('sanitize-html');
+import sanitizeHtml from 'sanitize-html';
 
 app.post('/comments', (req, res) => {
   let comment = req.body.comment;

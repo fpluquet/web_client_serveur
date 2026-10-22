@@ -2546,8 +2546,8 @@ La validation et la sanitisation des données ne sont pas des processus statique
 
 ### Configuration des sessions
 ```javascript
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 
 app.use(session({
     secret: process.env.SESSION_SECRET,
@@ -2589,7 +2589,7 @@ DB_PASSWORD=your-database-password
 API_KEY=your-api-key
 
 // Chargement sécurisé
-require('dotenv').config();
+import 'dotenv/config';
 
 // Validation des variables requises
 const requiredEnvVars = ['JWT_SECRET', 'DB_PASSWORD'];

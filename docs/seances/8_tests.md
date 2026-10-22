@@ -65,7 +65,7 @@ class Calculator {
   }
 }
 
-module.exports = Calculator;
+export default Calculator;
 
 // math.test.js - Tests unitaires
 import Calculator from './math.js';

@@ -4,7 +4,7 @@
 
 La gestion des données constitue le cœur de la plupart des applications web modernes. Que ce soit pour stocker les informations des utilisateurs, gérer un catalogue de produits, ou maintenir un système de contenu, l'interaction avec une base de données est incontournable. Dans ce chapitre, nous explorerons en détail comment construire des applications robustes en Node.js avec Express qui interagissent efficacement avec différents types de bases de données.
 
-L'évolution des applications web a mené à l'adoption de patterns architecturaux qui séparent clairement les responsabilités. Le pattern MVC (Modèle-Vue-Contrôleur) est devenu un standard pour organiser le code de manière maintenable et évolutive. Dans ce contexte, la couche modèle gère toute la logique liée aux données, tandis que les contrôleurs orchestrent les interactions entre les requêtes HTTP et les modèles.
+L'évolution des applications web a mené à l'adoption de patterns architecturaux qui séparent clairement les responsabilités. Le pattern MVC (Modèle-Vue-Contrôleur) reste une base utile, mais dans une API moderne on affine la couche « données » : le **modèle** représente l'entité métier (indépendant), le **repository** gère la persistance (SQL, MongoDB, etc.), et le **service** orchestre les règles métier en s'appuyant sur le modèle et le repository. Les contrôleurs gèrent uniquement les interactions HTTP.
 
 ## 2. Comprendre les requêtes HTTP et la gestion des données
 
@@ -1540,7 +1540,7 @@ export default router;
 
 ### 6.1 Architecture MVC avec Express
 
-Le pattern MVC (Modèle-Vue-Contrôleur) sépare les responsabilités de l'application en trois couches distinctes. Dans le contexte d'une API, la vue est généralement remplacée par des réponses JSON, mais la séparation entre modèles et contrôleurs reste cruciale.
+Le pattern MVC (Modèle-Vue-Contrôleur) sépare les responsabilités de l'application. Dans le contexte d'une API, la vue est généralement remplacée par des réponses JSON. On distingue en plus clairement **modèle** (entité) et **repository** (accès aux données), comme vu au chapitre API REST.
 
 **Structure des dossiers :**
 
@@ -1549,10 +1549,13 @@ src/
 ├── controllers/
 │   ├── userController.js
 │   └── postController.js
-├── models/
+├── models/                 # Entités métier (sans détail de stockage)
 │   ├── index.js
 │   ├── User.js
 │   └── Post.js
+├── repositories/           # Persistance / requêtes DB
+│   ├── userRepository.js
+│   └── postRepository.js
 ├── routes/
 │   ├── index.js
 │   ├── users.js
@@ -1561,7 +1564,7 @@ src/
 │   ├── auth.js
 │   ├── validation.js
 │   └── errorHandler.js
-├── services/
+├── services/               # Règles métier (orchestre model + repo)
 │   ├── userService.js
 │   └── postService.js
 └── app.js
@@ -1701,7 +1704,7 @@ class UserController {
     }
 }
 
-module.exports = UserController;
+export default UserController;
 ```
 
 **Routes avec validation :**
@@ -1775,7 +1778,7 @@ router.get('/:id', idValidation, UserController.getUser);
 router.put('/:id', updateUserValidation, UserController.updateUser);
 router.delete('/:id', idValidation, UserController.deleteUser);
 
-module.exports = router;
+export default router;
 ```
 
 ### 6.2 Gestion des erreurs et middleware
@@ -1831,7 +1834,7 @@ const notFound = (req, res) => {
     });
 };
 
-module.exports = { errorHandler, notFound };
+export { errorHandler, notFound };
 ```
 
 ### 6.3 Application complète avec initialisation de la base de données
@@ -1843,6 +1846,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import { pathToFileURL } from 'url';
 
 import { sequelize } from './models/index.js';
 import userRoutes from './routes/users.js';
@@ -1931,11 +1935,12 @@ process.on('SIGTERM', async () => {
     process.exit(0);
 });
 
-if (require.main === module) {
+// Équivalent ESM de `require.main === module` : démarrer si ce fichier est exécuté directement
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     startServer();
 }
 
-module.exports = app;
+export default app;
 ```
 
 ## 7. Migrations et gestion des évolutions de schéma
@@ -1950,7 +1955,7 @@ Les migrations sont des scripts qui permettent de modifier la structure de la ba
 // .sequelizerc
 import path from 'path';
 
-module.exports = {
+export default {
     'config': path.resolve('config', 'database.js'),
     'models-path': path.resolve('src', 'models'),
     'seeders-path': path.resolve('database', 'seeders'),
@@ -1962,7 +1967,7 @@ module.exports = {
 
 ```javascript
 // config/database.js
-module.exports = {
+export default {
     development: {
         dialect: 'sqlite',
         storage: './database.sqlite',
@@ -1994,9 +1999,7 @@ module.exports = {
 
 ```javascript
 // database/migrations/20231201120000-create-users.js
-'use strict';
-
-module.exports = {
+export default {
     async up(queryInterface, Sequelize) {
         await queryInterface.createTable('users', {
             id: {
@@ -2065,7 +2068,7 @@ npm install --save-dev jest supertest
 
 ```javascript
 // jest.config.js
-module.exports = {
+export default {
     testEnvironment: 'node',
     testMatch: ['**/__tests__/**/*.test.js'],
     collectCoverageFrom: [

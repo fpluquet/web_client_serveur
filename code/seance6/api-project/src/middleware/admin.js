@@ -1,10 +1,10 @@
-import User from '../models/User.js';
+import userRepository from '../repositories/UserRepository.js';
 
 // Middleware pour vérifier les rôles d'administrateur
 const adminMiddleware = async (req, res, next) => {
   try {
-    // Récupérer l'utilisateur complet depuis la base de données
-    const user = await User.findById(req.user.userId);
+    // Récupérer l'utilisateur complet via le repository
+    const user = await userRepository.findById(req.user.userId);
     
     if (!user) {
       return res.status(401).json({

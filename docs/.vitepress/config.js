@@ -2,16 +2,20 @@ import footnote from "markdown-it-footnote";
 import { defineConfig } from "vitepress";
 import { withMermaid } from "vitepress-plugin-mermaid";
 
+// En local (yarn docs:dev) → http://localhost:5173/
+// En build/preview (GitHub Pages) → https://…/web_client_serveur/
+const base = process.argv.includes("dev") ? "/" : "/web_client_serveur/";
+
 export default withMermaid(
   defineConfig({
     lang: "fr-FR",
     title: "Cours Web BA2",
-    base: '/web_client_serveur/',
+    base,
     description:
       "Syllabus du cours Web Bachelor 2 pour les étudiants de BA2 - HELHa",
     // Configuration pour la tête de document globale
     head: [
-      ["link", { rel: "icon", href: "/favicon.ico" }],
+      ["link", { rel: "icon", href: `${base}favicon.ico` }],
       // Métadonnées supplémentaires
       ["meta", { name: "theme-color", content: "#3eaf7c" }],
       ["meta", { name: "apple-mobile-web-app-capable", content: "yes" }],

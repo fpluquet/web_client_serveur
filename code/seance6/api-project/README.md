@@ -9,7 +9,7 @@ Cette application est un exemple complet d'API RESTful construite avec Node.js, 
 - **Validation des données** : Validation côté serveur avec express-validator
 - **Sécurité** : Helmet, CORS, limitation du taux de requêtes
 - **Tests** : Tests unitaires avec Jest et Supertest
-- **Structure modulaire** : Architecture MVC claire
+- **Structure modulaire** : Controllers → Services → Models / Repositories
 
 ## Installation
 
@@ -51,11 +51,13 @@ npm test
 
 ```
 src/
-├── controllers/     # Logique métier
+├── controllers/     # Orchestration HTTP (appelle les services)
 ├── middleware/      # Middlewares personnalisés
-├── models/          # Modèles de données
+├── models/          # Entités métier (indépendantes)
+├── repositories/    # Accès aux données (CRUD / stockage)
+├── services/        # Règles métier (orchestre model + repo)
 ├── routes/          # Définition des routes
-└── app.js          # Point d'entrée
+└── app.js           # Point d'entrée
 
-tests/              # Tests unitaires
+tests/               # Tests unitaires
 ```

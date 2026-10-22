@@ -1,56 +1,31 @@
-import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
-import User from '../models/User.js';
-
-// Génération du JWT
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET || 'secret_key', {
-    expiresIn: '24h'
-  });
-};
+import authService, { AuthError } from '../services/authService.js';
 
 // Inscription
 export const register = async (req, res) => {
   try {
-    // Vérification des erreurs de validation
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.error('Validation errors:', errors.array());
-      return res.status(400).json({ 
-        success: false,
-        errors: errors.array() 
-      });
-    }
-
-    const { username, email, password } = req.body;
-
-    // Vérifier si l'utilisateur existe déjà
-    const existingByEmail = await User.findOne({ email });
-    const existingByUsername = await User.findOne({ username });
-
-    if (existingByEmail || existingByUsername) {
       return res.status(400).json({
         success: false,
-        message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
+        errors: errors.array()
       });
     }
 
-    // Créer le nouvel utilisateur
-    const user = new User({ username, email, password });
-    await user.save();
-
-    // Générer le token
-    const token = generateToken(user.id);
+    const data = await authService.register(req.body);
 
     res.status(201).json({
       success: true,
-      data: {
-        user: user.toJSON(),
-        token
-      }
+      data
     });
-
   } catch (error) {
+    if (error instanceof AuthError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de l\'inscription:', error);
     res.status(500).json({
       success: false,
@@ -70,38 +45,19 @@ export const login = async (req, res) => {
       });
     }
 
-    const { email, password } = req.body;
-
-    // Trouver l'utilisateur
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Identifiants invalides'
-      });
-    }
-
-    // Vérifier le mot de passe
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Identifiants invalides'
-      });
-    }
-
-    // Générer le token
-    const token = generateToken(user.id);
+    const data = await authService.login(req.body);
 
     res.json({
       success: true,
-      data: {
-        user: user.toJSON(),
-        token
-      }
+      data
     });
-
   } catch (error) {
+    if (error instanceof AuthError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de la connexion:', error);
     res.status(500).json({
       success: false,

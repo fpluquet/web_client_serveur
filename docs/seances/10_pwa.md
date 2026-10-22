@@ -2828,7 +2828,7 @@ Le code splitting permet de diviser votre application en plusieurs petits bundle
 ```javascript
 // Configuration webpack pour le code splitting
 // webpack.config.js
-module.exports = {
+export default {
     entry: {
         main: './src/app.js',
         vendor: ['react', 'lodash'] // Bibliothèques externes dans un bundle séparé
@@ -4026,7 +4026,7 @@ npm install workbox-cli --global
 // webpack.config.js
 import { GenerateSW } from 'workbox-webpack-plugin';
 
-module.exports = {
+export default {
     // ... autres configurations webpack
     plugins: [
         new GenerateSW({
@@ -4356,12 +4356,11 @@ npm install next-pwa
 
 # Configuration dans next.config.js
 import withPWA from 'next-pwa';
+
+export default withPWA({
     dest: 'public',
     register: true,
     skipWaiting: true,
-});
-
-module.exports = withPWA({
     // Configuration Next.js
 });
 ```

@@ -442,6 +442,7 @@ console.log(decodedPayload); // {"userId":"1234567890","name":"John Doe","iat":1
 **Génération complète d'un JWT :**
 
 ```javascript
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
 const generateToken = (user) => {
@@ -476,7 +477,7 @@ const generateToken = (user) => {
 
 // Fonction helper pour générer un ID unique
 const generateUniqueId = () => {
-  return require('crypto').randomBytes(16).toString('hex');
+  return crypto.randomBytes(16).toString('hex');
 };
 ```
 
@@ -1100,7 +1101,8 @@ Avant de plonger dans l'implémentation complète, voici un exemple simple d'API
 ::: details api-simple/server.js
 <!-- @include:start api-simple/server.js -->
 ```javascript
-const express = require('express');
+import express from 'express';
+
 const app = express();
 
 // Middleware pour parser JSON
@@ -1235,6 +1237,7 @@ app.listen(PORT, () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
   console.log(`API disponible sur http://localhost:${PORT}`);
 });
+
 ```
 <!-- @include:end api-simple/server.js -->
 :::
@@ -1246,11 +1249,13 @@ app.listen(PORT, () => {
   "name": "api-simple",
   "version": "1.0.0",
   "description": "API simple pour débuter avec Express",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
+
   "dependencies": {
     "express": "^4.18.2"
   },
@@ -1279,16 +1284,15 @@ api-project/
 │   │   ├── validation.js
 │   │   └── errorHandler.js
 │   ├── models/
-│   │   └── User.js
+│   │   └── User.js                 # Entité métier (sans persistance)
+│   ├── repositories/
+│   │   └── UserRepository.js       # Accès aux données (CRUD / stockage)
 │   ├── routes/
-│   │   ├── auth.js
-│   │   └── users.js
-│   ├── services/
+│   │   ├── authRoutes.js
+│   │   └── userRoutes.js
+│   ├── services/                   # Règles métier (orchestre model + repo)
 │   │   ├── authService.js
 │   │   └── userService.js
-│   ├── utils/
-│   │   ├── database.js
-│   │   └── logger.js
 │   └── app.js
 ├── tests/
 ├── package.json
@@ -1297,7 +1301,27 @@ api-project/
 
 #### Architecture en couches : Comprendre le rôle de chaque composant
 
-Cette application RESTful suit une **architecture en couches** (layered architecture) qui sépare les responsabilités pour améliorer la maintenabilité, la testabilité et la scalabilité du code. Voici le rôle de chaque couche :
+Cette application RESTful suit une **architecture en couches** (layered architecture) qui sépare les responsabilités pour améliorer la maintenabilité, la testabilité et la scalabilité du code.
+
+::: tip Qui parle à qui ?
+```
+Controller  →  Service  →  Model
+                      ↘  Repository  →  Model (hydratation)
+```
+
+| Couche | Question | Dépend de |
+|--------|----------|-----------|
+| **Model** | *Qu'est-ce qu'un utilisateur ?* | personne (indépendant) |
+| **Repository** | *Comment le stocker / le retrouver ?* | Model (hydrate `new User(...)`) |
+| **Service** | *Quelle règle métier appliquer ?* | Model + Repository |
+| **Controller** | *Comment répondre en HTTP ?* | Service uniquement |
+
+Le **modèle** n'importe ni repository ni service.  
+Le **service** est le seul orchestrateur métier : unicité email, hashage avant save, JWT, etc.  
+Le **repository** fait uniquement le CRUD.
+:::
+
+Voici le rôle de chaque couche :
 
 ##### 1. **Couche d'entrée - Point d'entrée de l'application (`app.js`)**
 
@@ -1363,72 +1387,88 @@ const updateProfileValidation = [
 ##### 4. **Couche contrôleurs (`controllers/`)**
 
 ```javascript
-// authController.js - Logique métier des endpoints
-exports.register = async (req, res) => {
-  const errors = validationResult(req);  // Récupère les erreurs de validation
-  const user = new User(req.body);       // Utilise le modèle
-  await user.save();                     // Persiste les données
-  res.json({ user, token });             // Formate la réponse
+// authController.js - HTTP uniquement : délègue au service
+export const register = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const data = await authService.register(req.body);
+  res.status(201).json({ success: true, data });
 };
 ```
 
 **Responsabilités :**
-- **Logique métier** : Traitement des requêtes HTTP
-- **Orchestration** : Coordination entre modèles et services
-- **Formatage des réponses** : Structure des réponses JSON
-- **Gestion des erreurs** : Capture et transmission des erreurs métier
-- **Codes de statut HTTP** : Choix approprié des codes de retour
+- **Orchestration HTTP** : validation d'entrée, appel au **service**, réponse JSON
+- **Codes de statut HTTP** : choix approprié des codes de retour
+- **Pas de modèle ni de repository** : le contrôleur ne crée pas de `User` et n'écrit pas en base
 
-##### 5. **Couche modèles (`models/`)**
+##### 5. **Couche services (`services/`) — l'orchestrateur métier**
 
 ```javascript
-// User.js - Représentation et persistance des données
+// authService.js - Seul endroit qui combine Model + Repository
+export const register = async ({ username, email, password }) => {
+  const existing = await userRepository.findOne({ email });
+  if (existing) throw new AuthError('Email déjà utilisé', 400);
+
+  const user = new User({ username, email, password });
+  await user.hashPassword();                 // comportement du modèle
+  await userRepository.save(user);           // persistance via repository
+  return { user: user.toJSON(), token: generateToken(user.id) };
+};
+```
+
+**Responsabilités :**
+- **Règles métier** : unicité email/username, mots de passe, JWT…
+- **Orchestration** : crée / manipule le **modèle**, appelle le **repository**
+- **Indépendance HTTP** : pas de `req` / `res` ici
+
+##### 6. **Couche modèles (`models/`) — l'entité métier (indépendante)**
+
+```javascript
+// User.js - Représentation d'un utilisateur (SANS persistance)
 class User {
   constructor(userData) {
     this.id = userData.id || Date.now().toString();
     this.username = userData.username;
+    this.email = userData.email;
+    this.password = userData.password;
     // ...
   }
-  
-  async save() {
-    // Logique de persistance (ici en fichier JSON)
-  }
-  
-  static async findById(id) {
-    // Logique de recherche
-  }
+
+  async hashPassword() { /* comportement de l'entité */ }
+  async comparePassword(candidate) { /* ... */ }
+  toJSON() { /* exclut le mot de passe */ }
 }
 ```
 
 **Responsabilités :**
-- **Représentation des données** : Structure des entités métier
-- **Persistance** : Interface avec le système de stockage (JSON, base de données)
-- **Validation des données** : Règles de validation au niveau modèle
-- **Transformation** : Hashage des mots de passe, formatage des dates
-- **Requêtes** : Méthodes pour CRUD (Create, Read, Update, Delete)
+- **Représentation des données** : structure des entités métier (`id`, `email`, `role`…)
+- **Comportement de l'entité** : hashage / comparaison de mot de passe, sérialisation
+- **Indépendance totale** : n'importe ni repository ni service ; aucun `fs` / SQL / MongoDB
 
-##### 6. **Couche services (`services/`) - Optionnelle**
+##### 7. **Couche repositories (`repositories/`) — l'accès aux données**
 
 ```javascript
-// authService.js - Logique métier complexe réutilisable
-class AuthService {
-  static generateToken(user) {
-    return jwt.sign({ userId: user.id }, secret);
-  }
-  
-  static async validateCredentials(email, password) {
-    // Logique de validation complexe
-  }
+// UserRepository.js - Seule couche qui parle au stockage
+class UserRepository {
+  async save(user) { /* écrit dans le fichier JSON (ou la DB) */ }
+  async findById(id) { /* lit et retourne new User(...) */ }
+  async findOne(criteria) { /* ... */ }
+  async findByIdAndUpdate(id, updates) { /* ... */ }
 }
 ```
 
 **Responsabilités :**
-- **Logique métier réutilisable** : Fonctions utilisées par plusieurs contrôleurs
-- **Opérations complexes** : Algorithmes métier, calculs
-- **Intégrations externes** : APIs tierces, services de mailing
-- **Abstraction** : Encapsulation de la complexité
+- **Persistance** : Create, Read, Update, Delete
+- **Hydratation** : reconstruire des instances `User` à partir des données brutes
+- **Pas de règles métier** : pas de hashage, pas de JWT, pas de contrôle d'unicité métier
 
-##### 7. **Couche utilitaires (`utils/`)**
+::: warning Pourquoi séparer model et repository ?
+Si demain on remplace le fichier JSON par MongoDB, on **ne touche qu'au repository**.  
+Le modèle `User`, les services et les contrôleurs restent identiques.
+:::
+
+##### 8. **Couche utilitaires (`utils/`)**
 
 ```javascript
 // logger.js - Fonctions d'aide transversales
@@ -1439,10 +1479,9 @@ const logger = {
 ```
 
 **Responsabilités :**
-- **Fonctions utilitaires** : Helpers réutilisables dans toute l'application
-- **Configuration** : Paramètres globaux, constantes
-- **Formatage** : Fonctions de transformation des données
-- **Logging** : Système de journalisation
+- **Fonctions utilitaires** : helpers réutilisables dans toute l'application
+- **Configuration** : paramètres globaux, constantes
+- **Logging** : système de journalisation
 
 #### Flux de données dans l'architecture
 
@@ -1450,10 +1489,11 @@ const logger = {
 1. Requête HTTP → app.js (middlewares globaux)
 2. Routage → routes/ (middlewares spécifiques)
 3. Middleware → middleware/ (auth, validation)
-4. Contrôleur → controllers/ (logique métier)
-5. Modèle → models/ (persistance)
-6. Service → services/ (logique complexe)
-7. Réponse ← formatée par le contrôleur
+4. Contrôleur → controllers/ (HTTP)
+5. Service → services/ (règles métier + orchestration)
+6. Repository → repositories/ (persistance)
+7. Model → models/ (entité en mémoire, hydratée par le repo)
+8. Réponse ← formatée par le contrôleur
 ```
 
 **Exemple concret : `PUT /api/users/profile`**
@@ -1462,16 +1502,17 @@ const logger = {
 2. **userRoutes.js** : Route vers `authMiddleware` → `updateProfileValidation` → `userController.updateProfile`
 3. **auth.js** : Vérifie le token JWT, enrichit `req.user`
 4. **validation.js** : Valide les données du body
-5. **userController.js** : Traite la logique métier
-6. **User.js** : Modifie et sauvegarde les données
-7. **Réponse** : Retourne le profil mis à jour
+5. **userController.js** : Appelle `userService.updateProfile(...)`
+6. **userService.js** : Applique les règles (unicité…) puis délègue au repository
+7. **UserRepository.js** : Charge / met à jour / sauvegarde ; retourne un `User`
+8. **Réponse** : Le contrôleur renvoie le profil mis à jour
 
 Cette architecture garantit :
-- **Séparation des responsabilités** : Chaque couche a un rôle précis
-- **Maintenabilité** : Modifications localisées dans la couche appropriée
-- **Testabilité** : Chaque couche peut être testée indépendamment
-- **Réutilisabilité** : Middlewares et services réutilisables
-- **Scalabilité** : Ajout facile de nouvelles fonctionnalités
+- **Séparation des responsabilités** : Model indépendant, Service orchestrateur, Repository = stockage
+- **Maintenabilité** : changer de stockage = modifier uniquement le repository
+- **Testabilité** : mock du repository pour tester le service sans fichiers / DB
+- **Réutilisabilité** : middlewares, services et repositories réutilisables
+- **Scalabilité** : ajout facile de nouvelles fonctionnalités
 
 ### 2.2 Implémentation complète avec sécurité et bonnes pratiques
 
@@ -1570,26 +1611,80 @@ export const close = () => server.close();
 <!-- @include:end api-project/src/app.js -->
 :::
 
-#### Modèle utilisateur avec stockage en fichiers JSON
+#### Modèle, repository et service (stockage JSON)
 
 Dans cette section, nous utilisons un système de stockage basé sur des fichiers JSON. Cette approche est idéale pour :
 - **Apprentissage** : Se concentrer sur les concepts REST sans la complexité d'une base de données
 - **Prototypage rapide** : Démarrer rapidement sans configuration de base de données
 - **Environnements simples** : Applications légères ou environnements de développement
 
-Le modèle `User` implémente une interface simple et efficace pour la gestion des données utilisateurs. Il faudra adapter cette approche pour une base de données réelle (MongoDB, PostgreSQL, etc.) dans une application de production (voir chapitre suivant).
+La séparation est volontairement explicite :
+- **`models/User.js`** : entité indépendante (champs + comportements)
+- **`repositories/UserRepository.js`** : lecture / écriture JSON + hydratation `User`
+- **`services/authService.js` et `userService.js`** : règles métier ; seuls à combiner modèle et repository
+
+Quand on passera à une vraie base de données (chapitre suivant), on remplacera surtout le **repository** ; modèle et services restent conceptuellement les mêmes.
 
 ::: details src/models/User.js
 <!-- @include:start api-project/src/models/User.js -->
 ```javascript
+import bcrypt from 'bcryptjs';
+
+/**
+ * Modèle User : représentation métier d'un utilisateur.
+ * Indépendant du stockage : n'importe ni repository ni service.
+ */
+class User {
+  constructor(userData) {
+    this.id = userData.id || Date.now().toString();
+    this.username = userData.username;
+    this.email = userData.email;
+    this.password = userData.password;
+    this.role = userData.role || 'user';
+    this.createdAt = userData.createdAt || new Date().toISOString();
+  }
+
+  async hashPassword() {
+    if (this.password && !this.password.startsWith('$2a$')) {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+  }
+
+  async comparePassword(candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
+  }
+
+  /** Sérialisation API : exclut le mot de passe. */
+  toJSON() {
+    const userObject = { ...this };
+    delete userObject.password;
+    return userObject;
+  }
+}
+
+export default User;
+
+```
+<!-- @include:end api-project/src/models/User.js -->
+:::
+
+::: details src/repositories/UserRepository.js
+<!-- @include:start api-project/src/repositories/UserRepository.js -->
+```javascript
 import fs from 'fs/promises';
 import path from 'path';
-import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
+import User from '../models/User.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Accès bas niveau au stockage fichier JSON.
+ * Isolé ici pour que le repository puisse un jour basculer
+ * vers une vraie base de données sans toucher au modèle User.
+ */
 class FileDataStore {
   constructor(filename) {
     this.filename = filename;
@@ -1622,180 +1717,282 @@ class FileDataStore {
     await fs.writeFile(this.filePath, JSON.stringify(data, null, 2));
   }
 }
-const filename = process.env.ENVIRONMENT?.trim() === "test" ? "users.test" : "users.prod";
 
-class User {
-  constructor(userData) {
-    this.id = userData.id || Date.now().toString();
-    this.username = userData.username;
-    this.email = userData.email;
-    this.password = userData.password;
-    this.role = userData.role || 'user';
-    this.createdAt = userData.createdAt || new Date().toISOString();
+/**
+ * Repository User : CRUD uniquement.
+ * Hydrate des instances User à la lecture.
+ * Ne contient pas de règles métier (unicité, JWT, hashage…).
+ */
+class UserRepository {
+  constructor() {
+    const filename =
+      process.env.ENVIRONMENT?.trim() === 'test' ? 'users.test' : 'users.prod';
+    this.dataStore = new FileDataStore(filename);
   }
 
-  static dataStore = new FileDataStore(filename);
-
-  // Méthode pour hasher le mot de passe
-  async hashPassword() {
-    if (this.password && !this.password.startsWith('$2a$')) {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
-    }
-  }
-
-  // Méthode pour vérifier le mot de passe
-  async comparePassword(candidatePassword) {
-    return bcrypt.compare(candidatePassword, this.password);
-  }
-
-  // Méthode pour exclure le mot de passe lors de la sérialisation
-  toJSON() {
-    const userObject = { ...this };
-    delete userObject.password;
-    return userObject;
-  }
-
-  // Sauvegarder un utilisateur
-  async save() {
-    await this.hashPassword();
-    const users = await User.dataStore.readData();
-
-    // Objet plain : JSON.stringify appellerait sinon toJSON() et omettrait le password
+  async save(user) {
+    const users = await this.dataStore.readData();
     const userToSave = {
-      id: this.id,
-      username: this.username,
-      email: this.email,
-      password: this.password,
-      role: this.role,
-      createdAt: this.createdAt
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      password: user.password,
+      role: user.role,
+      createdAt: user.createdAt
     };
-    
-    // Vérifier si l'utilisateur existe déjà
-    const existingIndex = users.findIndex(u => u.id === this.id);
-    
+
+    const existingIndex = users.findIndex((u) => u.id === user.id);
+
     if (existingIndex >= 0) {
       users[existingIndex] = userToSave;
     } else {
       users.push(userToSave);
     }
-    
-    await User.dataStore.writeData(users);
-    return this;
+
+    await this.dataStore.writeData(users);
+    return user;
   }
 
-  // Trouver un utilisateur par critères (égalité exacte sur chaque champ)
-  static async findOne(criteria) {
-    const users = await User.dataStore.readData();
-    const userData = users.find(user =>
-      Object.keys(criteria).every(key => user[key] === criteria[key])
+  async findOne(criteria) {
+    const users = await this.dataStore.readData();
+    const userData = users.find((user) =>
+      Object.keys(criteria).every((key) => user[key] === criteria[key])
     );
     return userData ? new User(userData) : null;
   }
 
-  // Trouver un utilisateur par ID
-  static async findById(id) {
-    const users = await User.dataStore.readData();
-    const userData = users.find(user => user.id === id);
+  async findById(id) {
+    const users = await this.dataStore.readData();
+    const userData = users.find((user) => user.id === id);
     return userData ? new User(userData) : null;
   }
 
   /**
-   * Trouve un utilisateur par id et applique les mises à jour.
    * @param {string} id
    * @param {object} updates
-   * @returns {Promise<User|null>} Le document mis à jour, ou null si introuvable
+   * @returns {Promise<User|null>}
    */
-  static async findByIdAndUpdate(id, updates) {
-    const users = await User.dataStore.readData();
-    const userIndex = users.findIndex(user => user.id === id);
-    
+  async findByIdAndUpdate(id, updates) {
+    const users = await this.dataStore.readData();
+    const userIndex = users.findIndex((user) => user.id === id);
+
     if (userIndex === -1) {
       return null;
     }
-    
+
     users[userIndex] = { ...users[userIndex], ...updates };
-    await User.dataStore.writeData(users);
+    await this.dataStore.writeData(users);
     return new User(users[userIndex]);
   }
 
-  // Trouver tous les utilisateurs avec pagination
-  static async find(options = {}) {
-    const users = await User.dataStore.readData();
-    return users;
+  async find() {
+    const users = await this.dataStore.readData();
+    return users.map((userData) => new User(userData));
   }
 
-  // Compter les documents
-  static async countDocuments() {
-    const users = await User.dataStore.readData();
+  async countDocuments() {
+    const users = await this.dataStore.readData();
     return users.length;
   }
 }
 
-export default User;
+export default new UserRepository();
+
 ```
-<!-- @include:end api-project/src/models/User.js -->
+<!-- @include:end api-project/src/repositories/UserRepository.js -->
 :::
 
-
-#### Contrôleurs et logique métier
-
-::: details src/controllers/authController.js
-<!-- @include:start api-project/src/controllers/authController.js -->
+::: details src/services/authService.js
+<!-- @include:start api-project/src/services/authService.js -->
 ```javascript
 import jwt from 'jsonwebtoken';
-import { validationResult } from 'express-validator';
 import User from '../models/User.js';
+import userRepository from '../repositories/UserRepository.js';
 
-// Génération du JWT
+/** Erreur métier avec code HTTP pour le contrôleur. */
+export class AuthError extends Error {
+  constructor(message, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET || 'secret_key', {
     expiresIn: '24h'
   });
 };
 
+/**
+ * Service d'authentification : orchestre modèle + repository.
+ * Le contrôleur ne parle qu'à ce service.
+ */
+export const register = async ({ username, email, password }) => {
+  const existingByEmail = await userRepository.findOne({ email });
+  const existingByUsername = await userRepository.findOne({ username });
+
+  if (existingByEmail || existingByUsername) {
+    throw new AuthError(
+      'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà',
+      400
+    );
+  }
+
+  const user = new User({ username, email, password });
+  await user.hashPassword();
+  await userRepository.save(user);
+
+  return {
+    user: user.toJSON(),
+    token: generateToken(user.id)
+  };
+};
+
+export const login = async ({ email, password }) => {
+  const user = await userRepository.findOne({ email });
+  if (!user) {
+    throw new AuthError('Identifiants invalides', 401);
+  }
+
+  const isPasswordValid = await user.comparePassword(password);
+  if (!isPasswordValid) {
+    throw new AuthError('Identifiants invalides', 401);
+  }
+
+  return {
+    user: user.toJSON(),
+    token: generateToken(user.id)
+  };
+};
+
+export default { register, login };
+
+```
+<!-- @include:end api-project/src/services/authService.js -->
+:::
+
+::: details src/services/userService.js
+<!-- @include:start api-project/src/services/userService.js -->
+```javascript
+import userRepository from '../repositories/UserRepository.js';
+
+/** Erreur métier avec code HTTP pour le contrôleur. */
+export class UserError extends Error {
+  constructor(message, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+
+/**
+ * Service utilisateurs : orchestre modèle + repository.
+ * Le contrôleur ne parle qu'à ce service.
+ */
+export const getProfile = async (userId) => {
+  const user = await userRepository.findById(userId);
+  if (!user) {
+    throw new UserError('Utilisateur non trouvé', 404);
+  }
+  return user.toJSON();
+};
+
+export const updateProfile = async (userId, { username, email }) => {
+  if (email) {
+    const existing = await userRepository.findOne({ email });
+    if (existing && existing.id !== userId) {
+      throw new UserError(
+        'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà',
+        400
+      );
+    }
+  }
+  if (username) {
+    const existing = await userRepository.findOne({ username });
+    if (existing && existing.id !== userId) {
+      throw new UserError(
+        'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà',
+        400
+      );
+    }
+  }
+
+  const updates = {};
+  if (username !== undefined) updates.username = username;
+  if (email !== undefined) updates.email = email;
+
+  const updatedUser = await userRepository.findByIdAndUpdate(userId, updates);
+  if (!updatedUser) {
+    throw new UserError('Utilisateur non trouvé', 404);
+  }
+
+  return updatedUser.toJSON();
+};
+
+export const getUsers = async ({ page = 1, limit = 10 } = {}) => {
+  const skip = (page - 1) * limit;
+  const allUsers = await userRepository.find();
+  const users = allUsers
+    .map((user) => user.toJSON())
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(skip, skip + limit);
+
+  const total = await userRepository.countDocuments();
+
+  return {
+    users,
+    pagination: {
+      page,
+      pages: Math.ceil(total / limit),
+      total
+    }
+  };
+};
+
+export default { getProfile, updateProfile, getUsers };
+
+```
+<!-- @include:end api-project/src/services/userService.js -->
+:::
+
+
+#### Contrôleurs : orchestration HTTP via le service
+
+Les contrôleurs ne parlent **ni** au fichier JSON **ni** directement au modèle / repository. Ils :
+1. valident la requête HTTP ;
+2. délèguent toute la logique métier au **service** ;
+3. formatent la réponse JSON.
+
+::: details src/controllers/authController.js
+<!-- @include:start api-project/src/controllers/authController.js -->
+```javascript
+import { validationResult } from 'express-validator';
+import authService, { AuthError } from '../services/authService.js';
+
 // Inscription
 export const register = async (req, res) => {
   try {
-    // Vérification des erreurs de validation
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.error('Validation errors:', errors.array());
-      return res.status(400).json({ 
-        success: false,
-        errors: errors.array() 
-      });
-    }
-
-    const { username, email, password } = req.body;
-
-    // Vérifier si l'utilisateur existe déjà
-    const existingByEmail = await User.findOne({ email });
-    const existingByUsername = await User.findOne({ username });
-
-    if (existingByEmail || existingByUsername) {
       return res.status(400).json({
         success: false,
-        message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
+        errors: errors.array()
       });
     }
 
-    // Créer le nouvel utilisateur
-    const user = new User({ username, email, password });
-    await user.save();
-
-    // Générer le token
-    const token = generateToken(user.id);
+    const data = await authService.register(req.body);
 
     res.status(201).json({
       success: true,
-      data: {
-        user: user.toJSON(),
-        token
-      }
+      data
     });
-
   } catch (error) {
+    if (error instanceof AuthError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de l\'inscription:', error);
     res.status(500).json({
       success: false,
@@ -1815,38 +2012,19 @@ export const login = async (req, res) => {
       });
     }
 
-    const { email, password } = req.body;
-
-    // Trouver l'utilisateur
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Identifiants invalides'
-      });
-    }
-
-    // Vérifier le mot de passe
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Identifiants invalides'
-      });
-    }
-
-    // Générer le token
-    const token = generateToken(user.id);
+    const data = await authService.login(req.body);
 
     res.json({
       success: true,
-      data: {
-        user: user.toJSON(),
-        token
-      }
+      data
     });
-
   } catch (error) {
+    if (error instanceof AuthError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de la connexion:', error);
     res.status(500).json({
       success: false,
@@ -1856,6 +2034,7 @@ export const login = async (req, res) => {
 };
 
 export default { register, login };
+
 ```
 <!-- @include:end api-project/src/controllers/authController.js -->
 :::
@@ -1863,25 +2042,25 @@ export default { register, login };
 ::: details src/controllers/userController.js
 <!-- @include:start api-project/src/controllers/userController.js -->
 ```javascript
-import User from '../models/User.js';
 import { validationResult } from 'express-validator';
+import userService, { UserError } from '../services/userService.js';
 
 // Obtenir le profil utilisateur
 export const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
-    }
+    const user = await userService.getProfile(req.user.userId);
 
     res.json({
       success: true,
-      data: user.toJSON()
+      data: user
     });
   } catch (error) {
+    if (error instanceof UserError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de la récupération du profil:', error);
     res.status(500).json({
       success: false,
@@ -1901,48 +2080,19 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    const { username, email } = req.body;
-    const userId = req.user.userId;
-
-    // Vérifier si le nouvel email ou username existe déjà (chez un autre utilisateur)
-    if (email) {
-      const existing = await User.findOne({ email });
-      if (existing && existing.id !== userId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
-        });
-      }
-    }
-    if (username) {
-      const existing = await User.findOne({ username });
-      if (existing && existing.id !== userId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
-        });
-      }
-    }
-
-    // Ne passer que les champs fournis (évite d'écraser avec undefined)
-    const updates = {};
-    if (username !== undefined) updates.username = username;
-    if (email !== undefined) updates.email = email;
-    const updatedUser = await User.findByIdAndUpdate(userId, updates);
-
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
-    }
+    const user = await userService.updateProfile(req.user.userId, req.body);
 
     res.json({
       success: true,
-      data: updatedUser.toJSON()
+      data: user
     });
-
   } catch (error) {
+    if (error instanceof UserError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de la mise à jour du profil:', error);
     res.status(500).json({
       success: false,
@@ -1956,32 +2106,20 @@ export const getUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
 
-    const allUsers = await User.find();
-    const users = allUsers
-      .map(user => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      })
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(skip, skip + limit);
-
-    const total = await User.countDocuments();
+    const data = await userService.getUsers({ page, limit });
 
     res.json({
       success: true,
-      data: {
-        users,
-        pagination: {
-          page,
-          pages: Math.ceil(total / limit),
-          total
-        }
-      }
+      data
     });
-
   } catch (error) {
+    if (error instanceof UserError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de la récupération des utilisateurs:', error);
     res.status(500).json({
       success: false,
@@ -2002,7 +2140,7 @@ export default { getProfile, updateProfile, getUsers };
 <!-- @include:start api-project/src/middleware/auth.js -->
 ```javascript
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import userRepository from '../repositories/UserRepository.js';
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -2021,7 +2159,7 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key');
     
     // Vérifier que l'utilisateur existe encore
-    const user = await User.findById(decoded.userId);
+    const user = await userRepository.findById(decoded.userId);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -2163,13 +2301,13 @@ export default errorHandler;
 ::: details src/middleware/admin.js
 <!-- @include:start api-project/src/middleware/admin.js -->
 ```javascript
-import User from '../models/User.js';
+import userRepository from '../repositories/UserRepository.js';
 
 // Middleware pour vérifier les rôles d'administrateur
 const adminMiddleware = async (req, res, next) => {
   try {
-    // Récupérer l'utilisateur complet depuis la base de données
-    const user = await User.findById(req.user.userId);
+    // Récupérer l'utilisateur complet via le repository
+    const user = await userRepository.findById(req.user.userId);
     
     if (!user) {
       return res.status(401).json({

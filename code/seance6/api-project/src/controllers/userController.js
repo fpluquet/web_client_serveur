@@ -1,22 +1,22 @@
-import User from '../models/User.js';
 import { validationResult } from 'express-validator';
+import userService, { UserError } from '../services/userService.js';
 
 // Obtenir le profil utilisateur
 export const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
-    }
+    const user = await userService.getProfile(req.user.userId);
 
     res.json({
       success: true,
-      data: user.toJSON()
+      data: user
     });
   } catch (error) {
+    if (error instanceof UserError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de la récupération du profil:', error);
     res.status(500).json({
       success: false,
@@ -36,48 +36,19 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    const { username, email } = req.body;
-    const userId = req.user.userId;
-
-    // Vérifier si le nouvel email ou username existe déjà (chez un autre utilisateur)
-    if (email) {
-      const existing = await User.findOne({ email });
-      if (existing && existing.id !== userId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
-        });
-      }
-    }
-    if (username) {
-      const existing = await User.findOne({ username });
-      if (existing && existing.id !== userId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Un utilisateur avec cet email ou nom d\'utilisateur existe déjà'
-        });
-      }
-    }
-
-    // Ne passer que les champs fournis (évite d'écraser avec undefined)
-    const updates = {};
-    if (username !== undefined) updates.username = username;
-    if (email !== undefined) updates.email = email;
-    const updatedUser = await User.findByIdAndUpdate(userId, updates);
-
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
-    }
+    const user = await userService.updateProfile(req.user.userId, req.body);
 
     res.json({
       success: true,
-      data: updatedUser.toJSON()
+      data: user
     });
-
   } catch (error) {
+    if (error instanceof UserError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de la mise à jour du profil:', error);
     res.status(500).json({
       success: false,
@@ -91,32 +62,20 @@ export const getUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
 
-    const allUsers = await User.find();
-    const users = allUsers
-      .map(user => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      })
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(skip, skip + limit);
-
-    const total = await User.countDocuments();
+    const data = await userService.getUsers({ page, limit });
 
     res.json({
       success: true,
-      data: {
-        users,
-        pagination: {
-          page,
-          pages: Math.ceil(total / limit),
-          total
-        }
-      }
+      data
     });
-
   } catch (error) {
+    if (error instanceof UserError) {
+      return res.status(error.status).json({
+        success: false,
+        message: error.message
+      });
+    }
     console.error('Erreur lors de la récupération des utilisateurs:', error);
     res.status(500).json({
       success: false,
