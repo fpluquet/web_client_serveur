@@ -494,9 +494,154 @@ function isPasswordStrong(password) {
 }
 ```
 
-#### JSON Web Tokens (JWT) : Authentification stateless
+#### JSON Web Tokens (JWT) : Authentification stateless {#jwt}
 
-Les JWT offrent une alternative moderne aux sessions traditionnelles, particulièrement adaptée aux architectures distribuées et aux API RESTful. Un JWT est un token auto-contenu qui encode les informations d'authentification de manière sécurisée.
+Les JWT offrent une alternative moderne aux sessions traditionnelles, particulièrement adaptée aux architectures distribuées et aux API RESTful. Un JWT est un token **auto-porté** (*self-contained*) : il transporte des claims d’identité que le serveur peut vérifier **sans** consulter une session stockée.
+
+::: tip Lien avec la séance 6
+La [séance 6](./6_api_rest.md) montre l’usage minimal (`jwt.sign` / `jwt.verify`) dans une API. Ici on détaille le **mécanisme technique** (encodage, signature, JWS/JWE), puis la configuration stricte, les refresh tokens et la révocation.
+:::
+
+##### Anatomie technique d’un JWT {#jwt-internals}
+
+Un JWT compact se présente comme **trois segments** séparés par des points :
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+└──────────────── header ──────────┘ └──── payload ────┘ └─────────────────── signature ────────────┘
+```
+
+Chacun des deux premiers segments est du **JSON encodé en Base64URL** (variante URL-safe du Base64 : pas de `+`, `/`, ni `=` de padding). Le troisième est la **signature cryptographique**, aussi en Base64URL.
+
+**1. Header (en-tête)**
+
+```json
+{ "alg": "HS256", "typ": "JWT" }
+```
+
+- `alg` : algorithme de signature (ex. `HS256` = HMAC-SHA256 avec secret partagé ; `RS256` = RSA + SHA-256 avec clé privée/publique)
+- `typ` : type du token (`JWT`)
+
+**2. Payload (charges / claims)**
+
+```json
+{
+  "sub": "1234",
+  "email": "alice@example.com",
+  "role": "user",
+  "iat": 1710000000,
+  "exp": 1710003600
+}
+```
+
+Claims courants : `sub` (sujet), `iat` (émis à), `exp` (expiration), `iss`, `aud`, `jti` (voir plus bas).
+
+**3. Signature**
+
+Pour un JWT signé en HS256, le principe est :
+
+```
+signature = HMAC-SHA256(
+  base64url(header) + "." + base64url(payload),
+  secret
+)
+```
+
+Le serveur qui possède le secret peut **recalculer** la signature et la comparer. Si le payload a été modifié (ex. `role: "admin"`), la signature ne correspond plus → token rejeté.
+
+```javascript
+import crypto from 'crypto';
+
+// Illustration pédagogique (en prod, utiliser jsonwebtoken)
+const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+const payload = Buffer.from(JSON.stringify({ sub: '1234', role: 'user' })).toString('base64url');
+const data = `${header}.${payload}`;
+const signature = crypto
+  .createHmac('sha256', process.env.JWT_SECRET)
+  .update(data)
+  .digest('base64url');
+
+const token = `${data}.${signature}`;
+```
+
+##### Encodage ≠ chiffrement {#jwt-encoding}
+
+C’est le point le plus mal compris — et le plus important pour la sécurité :
+
+| | Encodage (Base64URL) | Signature (JWS) | Chiffrement (JWE) |
+|--|----------------------|-----------------|-------------------|
+| **But** | Rendre le JSON transportable dans une URL / un header | Prouver que le contenu n’a **pas été altéré** et vient d’une partie de confiance | Rendre le contenu **illisible** sans clé |
+| **Le contenu est-il secret ?** | Non — n’importe qui peut décoder | Non — le payload reste lisible | Oui |
+| **Dans un JWT « classique »** | Oui (header + payload) | Oui | **Non** (sauf si on utilise JWE) |
+
+Conséquences pratiques :
+
+1. **Ne jamais** mettre de mot de passe, numéro de carte, secret API, données médicales, etc. dans le payload d’un JWT signé classique.
+2. On peut inspecter n’importe quel JWT sur [jwt.io](https://jwt.io) : le payload s’affiche en clair après décodage Base64URL.
+3. La signature garantit l’**intégrité** et l’**authenticité**, pas la **confidentialité**.
+
+```javascript
+// Décoder le payload SANS vérifier la signature (démo uniquement !)
+const [, payloadB64] = token.split('.');
+const claims = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+console.log(claims); // lisible par tout le monde
+```
+
+Toujours utiliser `jwt.verify(...)` côté serveur (vérifie signature + `exp`, etc.). Un simple `jwt.decode(...)` **ne sécurise rien**.
+
+##### Famille JOSE : JWT, JWS, JWE {#jose}
+
+« JWT » est souvent utilisé comme raccourci, mais la norme repose sur la famille **JOSE** (*JavaScript Object Signing and Encryption*) :
+
+```mermaid
+flowchart TB
+  JWT["JWT - contenu logique claims"]
+  JWS["JWS - JWT signé compact header.payload.signature"]
+  JWE["JWE - JWT chiffré compact 5 segments"]
+  JWT -->|le plus courant pour les API| JWS
+  JWT -->|confidentialité requise| JWE
+```
+
+| Acronyme | Nom | Rôle |
+|----------|-----|------|
+| **JWT** | JSON Web Token | Format de claims (le « message ») |
+| **JWS** | JSON Web Signature | Message **signé** (intégrité + authenticité) — c’est le JWT à 3 parties que vous utilisez avec `jsonwebtoken` |
+| **JWE** | JSON Web Encryption | Message **chiffré** (confidentialité) — 5 segments séparés par des points |
+| **JWK** | JSON Web Key | Représentation JSON d’une clé crypto |
+| **JWA** | JSON Web Algorithms | Catalogue d’algorithmes (`HS256`, `RS256`, `A256GCM`…) |
+
+**JWS (ce que font 99 % des APIs REST du cours)**  
+
+`header.payload.signature` — payload lisible, signature vérifiable. Algorithmes typiques :
+
+- **HS256** : secret partagé (simple, idéal pour une seule API qui signe et vérifie)
+- **RS256 / ES256** : clé privée pour signer, clé publique pour vérifier (plusieurs services peuvent vérifier sans connaître la clé privée)
+
+**JWE (quand le payload doit rester secret)**  
+
+Format compact à **cinq** parties :  
+`protectedHeader.encryptedKey.iv.ciphertext.tag`
+
+Le contenu n’est lisible qu’avec la clé de déchiffrement. Cas d’usage : tokens qui transportent des données sensibles *et* traversent des intermédiaires non fiables. Plus complexe (gestion des clés, librairies dédiées type `jose`) ; on ne l’utilise pas dans le projet de la séance 6.
+
+**En résumé pour ce cours :**
+
+- « JWT » en pratique = presque toujours un **JWS**
+- Signature = **confiance dans l’émetteur** + **intégrité**
+- Pas de confidentialité sans **JWE** (ou sans chiffrer autrement les données sensibles)
+- En production API : JWS court + HTTPS (le canal chiffre le transport) + claims stricts (§ suivant)
+
+##### Configuration JWT stricte : `issuer`, `audience`, `jti` {#jwt-strict}
+
+Au-delà de `jwt.sign({ userId }, secret)`, une API de production **contraint** qui a émis le token, pour qui, et avec quel identifiant unique :
+
+| Claim / option | Rôle | Pourquoi c’est important |
+|----------------|------|---------------------------|
+| **`issuer` (`iss`)** | Qui a émis le token (votre API) | Refuse un JWT signé pour une autre appli avec la même clé volée ailleurs |
+| **`audience` (`aud`)** | Destinataire prévu (vos clients) | Empêche de réutiliser un token prévu pour un autre service |
+| **`jti`** | ID unique du token | Permet la **révocation** (blacklist) et détecte la réutilisation |
+| **`algorithms`** à la vérif. | Liste blanche (ex. `['HS256']`) | Évite les attaques « algorithm none » / confusion RSA↔HMAC |
+| **`expiresIn` / `exp`** | Durée de vie courte (access token) | Limite la fenêtre d’abus si le token fuit |
 
 ```javascript
 import jwt from 'jsonwebtoken';
@@ -504,9 +649,9 @@ import crypto from 'crypto';
 
 // Configuration sécurisée pour JWT
 const JWT_CONFIG = {
-    secret: process.env.JWT_SECRET, // Doit être une chaîne longue et aléatoire
+    secret: process.env.JWT_SECRET, // Chaîne longue et aléatoire (jamais en dur dans le code)
     algorithm: 'HS256',
-    expiresIn: '1h',
+    expiresIn: '15m', // Access token court ; le refresh token dure plus longtemps
     issuer: 'monapp.com',
     audience: 'monapp-users'
 };
@@ -518,7 +663,7 @@ const generateToken = (user) => {
         email: user.email,
         role: user.role,
         iat: Math.floor(Date.now() / 1000), // Issued at
-        jti: crypto.randomUUID() // JWT ID unique pour éviter la réutilisation
+        jti: crypto.randomUUID() // JWT ID unique pour révocation / anti-rejeu
     };
     
     return jwt.sign(payload, JWT_CONFIG.secret, {
@@ -980,7 +1125,128 @@ app.delete('/documents/:id', verifyToken, authorizeABAC('document', 'delete'), (
 
 ### Gestion avancée des sessions et tokens
 
-#### Révocation de tokens et blacklist
+#### Refresh tokens : access token court + renouvellement {#refresh-tokens}
+
+Un **access token** JWT à longue durée de vie est dangereux : s’il fuit, l’attaquant reste authentifié longtemps, et on ne peut pas facilement l’invalider (token auto-porté).
+
+La stratégie classique :
+
+1. **Access token** : JWT court (ex. 5–15 min) — envoyé à chaque requête API (`Authorization: Bearer …`)
+2. **Refresh token** : opaque ou JWT longue durée (ex. 7–30 jours), stocké de façon plus stricte, utilisé **uniquement** pour obtenir un nouvel access token
+3. Quand l’access expire, le client appelle `POST /auth/refresh` avec le refresh token
+4. En cas de déconnexion / suspicion de vol : on **révoque** le refresh token (et éventuellement l’access via `jti` + blacklist)
+
+```javascript
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+
+const ACCESS_SECRET = process.env.JWT_SECRET;
+const REFRESH_SECRET = process.env.REFRESH_SECRET; // secret différent !
+
+// En mémoire pour l’exemple ; en prod : Redis / table DB
+const refreshTokenStore = new Map(); // refreshToken -> { userId, expiresAt }
+
+const generateAccessToken = (user) => {
+    return jwt.sign(
+        {
+            userId: user.id,
+            role: user.role,
+            jti: crypto.randomUUID()
+        },
+        ACCESS_SECRET,
+        {
+            expiresIn: '15m',
+            issuer: 'monapp.com',
+            audience: 'monapp-api',
+            algorithm: 'HS256'
+        }
+    );
+};
+
+const generateRefreshToken = (user) => {
+    const token = jwt.sign(
+        { userId: user.id, type: 'refresh', jti: crypto.randomUUID() },
+        REFRESH_SECRET,
+        {
+            expiresIn: '7d',
+            issuer: 'monapp.com',
+            audience: 'monapp-refresh',
+            algorithm: 'HS256'
+        }
+    );
+    const decoded = jwt.decode(token);
+    refreshTokenStore.set(token, {
+        userId: user.id,
+        expiresAt: decoded.exp * 1000
+    });
+    return token;
+};
+
+// Login : renvoie la paire de tokens
+app.post('/auth/login', async (req, res) => {
+    const user = await authenticateUser(req.body); // vérif email/password
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    res.json({
+        accessToken,
+        refreshToken,
+        expiresIn: 900 // secondes (15 min)
+    });
+});
+
+// Renouvellement de l’access token
+app.post('/auth/refresh', (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+        return res.status(401).json({ error: 'Refresh token manquant' });
+    }
+
+    const stored = refreshTokenStore.get(refreshToken);
+    if (!stored || stored.expiresAt < Date.now()) {
+        refreshTokenStore.delete(refreshToken);
+        return res.status(403).json({ error: 'Refresh token invalide ou expiré' });
+    }
+
+    try {
+        const decoded = jwt.verify(refreshToken, REFRESH_SECRET, {
+            algorithms: ['HS256'],
+            issuer: 'monapp.com',
+            audience: 'monapp-refresh'
+        });
+
+        // Rotation : invalider l’ancien refresh, en émettre un nouveau (option recommandée)
+        refreshTokenStore.delete(refreshToken);
+        const user = { id: decoded.userId, role: decoded.role /* charger depuis DB */ };
+        const newAccessToken = generateAccessToken(user);
+        const newRefreshToken = generateRefreshToken(user);
+
+        res.json({
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+            expiresIn: 900
+        });
+    } catch {
+        return res.status(403).json({ error: 'Refresh token invalide' });
+    }
+});
+
+// Logout : révoquer le refresh token
+app.post('/auth/logout', (req, res) => {
+    const { refreshToken } = req.body;
+    if (refreshToken) refreshTokenStore.delete(refreshToken);
+    res.json({ message: 'Déconnexion réussie' });
+});
+```
+
+**Bonnes pratiques :**
+
+- Secrets **différents** pour access et refresh (`JWT_SECRET` ≠ `REFRESH_SECRET`)
+- Access token **court** ; refresh token stocké côté client avec prudence (souvent httpOnly cookie sur le domaine d’auth, pas dans `localStorage` si possible)
+- **Rotation** du refresh token à chaque renouvellement (un token réutilisé = signal de vol)
+- Persister les refresh tokens côté serveur (DB/Redis) pour pouvoir les révoquer
+
+#### Révocation de tokens et blacklist {#jwt-blacklist}
 
 ```javascript
 import redis from 'redis';
@@ -1039,6 +1305,10 @@ app.post('/logout', verifyToken, checkTokenBlacklist, async (req, res) => {
 
 ## 4. Sécurisation des communications {#communications}
 
+::: tip Contenu promis depuis la séance 6
+Cette section couvre **HTTPS**, **Helmet** (headers / CSP) et **CORS granulaire** — le complément sécurité transport / navigateur après l’API JWT de base.
+:::
+
 La sécurisation des communications constitue un aspect fondamental de la sécurité web moderne. Dans un monde où les données transitent constamment sur des réseaux potentiellement compromis, protéger l'intégrité et la confidentialité des échanges entre clients et serveurs est crucial. Cette section explore les techniques et protocoles essentiels pour sécuriser efficacement les communications web.
 
 ### L'importance du chiffrement en transit
@@ -1047,7 +1317,7 @@ Les données qui transitent sur Internet passent par de nombreux intermédiaires
 
 Le chiffrement en transit garantit que même si un attaquant intercepte les communications, il ne pourra pas comprendre leur contenu sans posséder les clés de déchiffrement appropriées.
 
-### HTTPS et TLS : Les fondamentaux sécurisés
+### HTTPS et TLS : Les fondamentaux sécurisés {#https}
 
 #### Comprendre TLS/SSL
 
@@ -1135,7 +1405,7 @@ sudo certbot certonly --standalone -d votre-domaine.com
 
 Les headers de sécurité HTTP fournissent des instructions aux navigateurs sur la façon de traiter le contenu de votre site de manière sécurisée. Ils constituent une couche de défense supplémentaire contre diverses attaques.
 
-#### Configuration complète avec Helmet
+#### Configuration complète avec Helmet {#helmet}
 
 ```javascript
 import helmet from 'helmet';
@@ -1334,7 +1604,7 @@ const submitHSTSPreload = async (domain) => {
 };
 ```
 
-### CORS : Contrôle d'accès cross-origin sécurisé
+### CORS : Contrôle d'accès cross-origin sécurisé {#cors}
 
 Cross-Origin Resource Sharing (CORS) est un mécanisme qui permet à des ressources web d'être demandées depuis un autre domaine que celui qui sert la ressource. Une configuration CORS inappropriée peut exposer votre API à des attaques.
 
@@ -2544,7 +2814,20 @@ La validation et la sanitisation des données ne sont pas des processus statique
 
 ## 6. Gestion sécurisée des sessions {#sessions}
 
+Les **sessions serveur + cookies** restent une alternative (ou un complément) aux JWT purs, surtout pour les apps web classiques (SSR, formulaires). Contrairement au JWT access token, l’état vit côté serveur : la révocation est simple (`destroy`).
+
 ### Configuration des sessions
+
+Points critiques du cookie de session :
+
+| Option | Valeur recommandée | Effet |
+|--------|-------------------|--------|
+| `httpOnly` | `true` | Inaccessible depuis JavaScript → mitige le vol via XSS |
+| `secure` | `true` en production | Cookie envoyé uniquement en HTTPS |
+| `sameSite` | `'strict'` ou `'lax'` | Réduit le risque CSRF |
+| `store` | Redis / Mongo / DB | Pas de MemoryStore en multi-instances / prod |
+| `secret` | Variable d’environnement forte | Signature du cookie de session |
+
 ```javascript
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
@@ -2553,8 +2836,10 @@ app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    name: 'sid', // évite le nom par défaut trop prévisible connect.sid
     store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI
+        mongoUrl: process.env.MONGODB_URI,
+        ttl: 60 * 60 * 24 // aligné sur maxAge
     }),
     cookie: {
         secure: process.env.NODE_ENV === 'production', // HTTPS uniquement
@@ -2566,17 +2851,26 @@ app.use(session({
 ```
 
 ### Gestion de la déconnexion
+
+Toujours détruire la session **et** effacer le cookie côté client :
+
 ```javascript
 app.post('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
             return res.status(500).json({ error: 'Erreur de déconnexion' });
         }
-        res.clearCookie('connect.sid');
+        res.clearCookie('sid');
         res.json({ message: 'Déconnecté avec succès' });
     });
 });
 ```
+
+::: tip JWT vs session
+- **API mobile / SPA multi-services** → souvent JWT (+ refresh tokens, § ci-dessus)
+- **Site web monolithique / cookie first-party** → souvent session serveur
+Les deux exigent HTTPS en production et une gestion soignée de la déconnexion / révocation.
+:::
 
 ## 7. Sécurisation côté serveur {#serveur}
 

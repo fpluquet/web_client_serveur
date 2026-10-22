@@ -95,7 +95,7 @@ export default withMermaid(
               { text: "Node.js", link: "/seances/3_nodejs" },
               { text: "Express.js", link: "/seances/4_express" },
               { text: "Architecture Client Lourd", link: "/seances/5_client_lourd" },
-              { text: "API Rest", link: "/seances/6_api_rest" },
+              { text: "APIs RESTful", link: "/seances/6_api_rest" },
               { text: "Base de données", link: "/seances/7_db" },
               { text: "Tests", link: "/seances/8_tests" },
               { text: "Sécurité", link: "/seances/9_securite" },

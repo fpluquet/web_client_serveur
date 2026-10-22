@@ -1,1102 +1,389 @@
-# APIs RESTful et sécurité web
+# APIs RESTful avec Node.js et Express
 
-## 1. Théorie
+## Objectifs et carte de la séance
 
-### 1.1 Principes des API RESTful
+Dans cette séance, vous apprenez à **concevoir et construire une API REST** avec Express :
 
-REST (Representational State Transfer) est un style d'architecture pour la conception d'APIs web qui a été introduit par Roy Fielding en 2000. Ce paradigme est devenu le standard de facto pour la création d'APIs web modernes en raison de sa simplicité, de sa scalabilité et de sa compatibilité avec le web.
+1. Principes REST (ressources, méthodes, codes de statut)
+2. Authentification **minimale** pour une API (JWT)
+3. Architecture en couches (Controller → Service → Model / Repository)
+4. Mise en pratique : API simple, puis projet complet
+5. Hygiène de l’API : validation, erreurs, rate limiting
+6. Exercices
 
-#### Architecture REST : les fondements
+::: tip Sécurité avancée → séance 9
+Ici on pose le **minimum** pour faire tourner une API authentifiée.
+Pour HTTPS, Helmet/CSP, CORS avancé, sessions cookies, refresh tokens, menaces OWASP, etc. : voir la [séance 9 — Sécurité](./9_securite.md).
+:::
 
-Le style architectural REST repose sur six contraintes fondamentales qui définissent la manière dont les applications web doivent être conçues pour être véritablement RESTful :
+---
 
-**1. Interface uniforme (Uniform Interface)**
-L'interface uniforme est le principe central de REST. Elle stipule que toutes les ressources doivent être accessibles via une interface standardisée. Cette contrainte se subdivise en quatre sous-contraintes :
+## 1. Principes des API RESTful
 
-- **Identification des ressources** : Chaque ressource doit être uniquement identifiable par une URI (Uniform Resource Identifier). Par exemple, `/api/users/123` identifie l'utilisateur avec l'ID 123.
-- **Manipulation des ressources par représentations** : Les clients interagissent avec les ressources via leurs représentations (JSON, XML, HTML).
-- **Messages auto-descriptifs** : Chaque message doit contenir suffisamment d'informations pour être traité (headers HTTP, codes de statut).
-- **HATEOAS** (Hypermedia as the Engine of Application State) : Les réponses incluent des liens vers d'autres ressources liées, permettant la découverte dynamique des actions possibles.
+REST (Representational State Transfer) est un style d’architecture pour les APIs web, introduit par Roy Fielding (2000). Il reste le standard de facto grâce à sa simplicité et sa compatibilité avec HTTP.
 
-**2. Sans état (Stateless)**
-Chaque requête du client vers le serveur doit contenir toutes les informations nécessaires pour traiter la requête. Le serveur ne doit stocker aucun contexte client entre les requêtes. Cela signifie que :
-- Aucune session n'est maintenue côté serveur
-- Chaque requête est indépendante
-- L'authentification doit être fournie à chaque requête
-- Cela améliore la scalabilité et la fiabilité
+### 1.1 Contraintes fondamentales
 
-**3. Cacheable**
-Les réponses doivent être explicitement marquées comme cachables ou non-cachables. Le cache améliore les performances en évitant des requêtes répétitives au serveur. Les headers HTTP comme `Cache-Control`, `ETag`, et `Last-Modified` permettent de contrôler le comportement du cache.
+1. **Interface uniforme** : ressources identifiées par des URI ; interaction via représentations (JSON) ; messages auto-descriptifs (headers, codes HTTP) ; éventuellement HATEOAS.
+2. **Sans état (stateless)** : chaque requête contient tout le nécessaire (souvent un token d’auth) ; pas de session serveur obligatoire.
+3. **Cacheable** : réponses marquées cachables ou non (`Cache-Control`, `ETag`…).
+4. **Client-serveur** : séparation UI / logique + données.
+5. **Système en couches** : proxies, gateways, caches possibles entre client et serveur.
+6. **Code à la demande** (optionnel) : le serveur peut envoyer du code exécutable au client.
 
-**4. Architecture client-serveur**
-Cette contrainte impose une séparation claire entre le client et le serveur. Le client gère l'interface utilisateur et l'expérience utilisateur, tandis que le serveur gère le stockage des données et la logique métier. Cette séparation permet :
-- Une évolution indépendante des deux composants
-- Une meilleure portabilité
-- Une réutilisation des composants
+::: details HATEOAS en bref
+Le client découvre les actions possibles via des liens `_links` dans la réponse, plutôt que d’avoir toutes les URLs en dur.
 
-**5. Système en couches (Layered System)**
-L'architecture peut être composée de couches hiérarchiques où chaque composant ne peut voir que la couche immédiatement adjacente. Cela permet d'ajouter des éléments intermédiaires comme des proxies, des gateways, ou des caches sans affecter la communication client-serveur.
-
-**6. Code à la demande (Code on Demand) - Optionnel**
-Cette contrainte optionnelle permet au serveur d'étendre temporairement les fonctionnalités du client en transmettant du code exécutable (JavaScript, par exemple).
-
-#### Focus sur HATEOAS : découverte dynamique des actions
-
-HATEOAS (Hypermedia as the Engine of Application State) est souvent la contrainte REST la moins comprise et la moins implémentée. Elle mérite une explication détaillée.
-
-**Le principe :** Un client interagit avec une API REST **uniquement via les liens hypermedia fournis dynamiquement par le serveur** dans les réponses. Le client n'a pas besoin de connaître à l'avance la structure complète de l'API — il découvre les actions possibles à travers les liens contenus dans les réponses du serveur.
-
-**Sans HATEOAS :**
-Le client sait qu'il doit faire :
-```
-GET /users/1
-GET /users/1/orders
-```
-Ces URL sont codées en dur dans le client → **fort couplage**.
-
-**Avec HATEOAS :**
-Réponse du serveur à `GET /users/1` :
 ```json
 {
   "id": 1,
   "name": "Alice",
-  "email": "alice@example.com",
   "_links": {
     "self": { "href": "/users/1" },
-    "orders": { "href": "/users/1/orders" },
-    "update": { "href": "/users/1", "method": "PUT" }
+    "orders": { "href": "/users/1/orders" }
   }
 }
 ```
 
-Le client lit les liens disponibles (`_links`) et sait quelles actions sont possibles :
-* consulter les commandes,
-* mettre à jour le profil, etc.
-→ **Il n'a pas besoin de connaître les routes à l'avance.**
+Utile pour l’évolutivité, mais **rarement implémenté complètement** dans les API modernes si la documentation (OpenAPI/Swagger) est claire.
+:::
 
-**En pratique :**
-* HATEOAS rend les **API plus évolutives** et **moins dépendantes du client**.
-* Mais il est **rarement implémenté complètement** dans les API REST modernes (souvent jugé trop verbeux ou inutile si la documentation est claire).
+### 1.2 Bonnes pratiques
 
-#### Bonnes pratiques pour les APIs RESTful
-
-**Conception des URLs orientées ressources :**
-
-Les URLs doivent représenter des ressources (noms) et non des actions (verbes). Les actions sont exprimées par les méthodes HTTP :
+**URLs orientées ressources** (noms, pas verbes) :
 
 ```
-✅ Bon :
-GET /api/users          # Récupérer tous les utilisateurs
-GET /api/users/123      # Récupérer l'utilisateur 123
-POST /api/users         # Créer un nouvel utilisateur
-PUT /api/users/123      # Mettre à jour l'utilisateur 123
-DELETE /api/users/123   # Supprimer l'utilisateur 123
-
-❌ Mauvais :
-GET /api/getUsers
-POST /api/createUser
-POST /api/deleteUser/123
+✅ GET /api/users — GET /api/users/123 — POST /api/users — PUT /api/users/123 — DELETE /api/users/123
+❌ GET /api/getUsers — POST /api/createUser — POST /api/deleteUser/123
 ```
 
-**Utilisation appropriée des codes de statut HTTP :**
+**Codes de statut HTTP :**
 
-Les codes de statut HTTP communiquent le résultat de la requête :
+- **2xx** : `200 OK`, `201 Created`, `204 No Content`
+- **4xx** : `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `422 Unprocessable Entity`
+- **5xx** : `500 Internal Server Error`, `503 Service Unavailable`
 
-- **2xx Succès** : `200 OK`, `201 Created`, `204 No Content`
-- **3xx Redirection** : `301 Moved Permanently`, `304 Not Modified`
-- **4xx Erreur client** : `400 Bad Request`, `401 Unauthorized`, `404 Not Found`, `422 Unprocessable Entity`
-- **5xx Erreur serveur** : `500 Internal Server Error`, `503 Service Unavailable`
+**Versionnement :** `/api/v1/users` ou header `API-Version`.
 
-**Versionnement des APIs :**
-
-Le versionnement est crucial pour maintenir la compatibilité :
-
-```javascript
-// Dans l'URL
-/api/v1/users
-/api/v2/users
-
-// Dans les headers
-Accept: application/vnd.api+json;version=1
-API-Version: 1.0
-```
-
-**Pagination pour les collections :**
-
-Pour les collections importantes, la pagination est essentielle :
-
-```javascript
-// Requête
-GET /api/users?page=2&limit=20
-
-// Réponse
-{
-  "data": [...],
-  "pagination": {
-    "page": 2,
-    "limit": 20,
-    "total": 150,
-    "pages": 8
-  },
-  "links": {
-    "first": "/api/users?page=1&limit=20",
-    "prev": "/api/users?page=1&limit=20",
-    "next": "/api/users?page=3&limit=20",
-    "last": "/api/users?page=8&limit=20"
-  }
-}
-```
-
-### 1.2 Authentification et autorisation dans le contexte Node.js
-
-L'authentification et l'autorisation sont des aspects cruciaux de la sécurité des APIs. Dans l'écosystème Node.js, plusieurs stratégies peuvent être mises en œuvre.
-
-#### Comprendre la différence entre authentification et autorisation
-
-- **Authentification** : "Qui êtes-vous ?" - Processus de vérification de l'identité d'un utilisateur.
-- **Autorisation** : "Que pouvez-vous faire ?" - Processus de détermination des permissions d'un utilisateur authentifié.
-
-#### Méthodes d'authentification pour Node.js/Express
-
-**1. Authentification par session et cookies :**
-
-Approche traditionnelle où l'état de session est maintenu côté serveur :
-
-```javascript
-import session from 'express-session';
-import FileStore from 'session-file-store';
-
-const FileStoreSession = FileStore(session);
-
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  store: new FileStoreSession({
-    path: './sessions',
-    encrypt: true
-  }),
-  cookie: {
-    secure: process.env.NODE_ENV === 'production', // HTTPS only en production
-    httpOnly: true, // Protection contre XSS
-    maxAge: 24 * 60 * 60 * 1000 // 24 heures
-  }
-}));
-```
-
-- **Avantages** : Familier, révocation facile des sessions
-- **Inconvénients** : Moins scalable, état côté serveur, problèmes avec les applications distribuées
-
-**2. JSON Web Tokens (JWT)**
-
-Les **JSON Web Tokens (JWT)** sont devenus le standard de facto pour l'authentification stateless dans les applications web modernes. Un JWT est un token sécurisé et autoporté qui permet de transmettre des informations d'identité entre parties de manière compacte et vérifiable.
-
-#### Structure complète d'un JWT
-
-Un JWT est composé de **trois parties** séparées par des points (`.`) :
-
-```
-header.payload.signature
-```
-
-**Exemple de JWT complet :**
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
-```
-
-
-##### 1. Header (En-tête)
-Contient les métadonnées sur le token :
+**Pagination :**
 
 ```json
 {
-  "alg": "HS256",    // Algorithme de signature (HMAC SHA256)
-  "typ": "JWT"       // Type de token
+  "data": [],
+  "pagination": { "page": 2, "limit": 20, "total": 150, "pages": 8 }
 }
 ```
 
-**Algorithmes de signature supportés :**
-- **HS256** (HMAC SHA256) : Signature symétrique avec clé secrète partagée
-- **RS256** (RSA SHA256) : Signature asymétrique avec clé privée/publique
-- **ES256** (ECDSA SHA256) : Signature avec courbes elliptiques
+---
 
-##### 2. Payload (Charge utile)
-Contient les **claims** (revendications) - les données sur l'utilisateur et le token :
+## 2. Authentification pour une API (minimum JWT)
 
-```json
-{
-  "sub": "1234567890",           // Subject - identifiant unique
-  "name": "John Doe",            // Claim personnalisé
-  "email": "john@example.com",   // Claim personnalisé
-  "role": "admin",               // Claim personnalisé
-  "iat": 1516239022,             // Issued At - moment de création
-  "exp": 1516325422,             // Expiration - moment d'expiration
-  "iss": "my-app",               // Issuer - qui a émis le token
-  "aud": "my-app-users"          // Audience - à qui est destiné le token
-}
-```
+### 2.1 Authentification vs autorisation
 
-**Types de claims :**
+- **Authentification** : *Qui êtes-vous ?* (vérifier l’identité)
+- **Autorisation** : *Que pouvez-vous faire ?* (permissions / rôles)
 
-- **Claims standards (RFC 7519) :**
-  - `iss` (issuer) : Émetteur du token
-  - `sub` (subject) : Sujet (généralement l'ID utilisateur)
-  - `aud` (audience) : Destinataire prévu
-  - `exp` (expiration) : Date d'expiration (timestamp UNIX)
-  - `iat` (issued at) : Date de création
-  - `nbf` (not before) : Date avant laquelle le token n'est pas valide
-  - `jti` (JWT ID) : Identifiant unique du token
+Approfondissement : [séance 9 § Authentication et autorisation](./9_securite.md#auth).
 
-- **Claims personnalisés :**
-  - `role`, `permissions`, `email`, `username`, etc.
-  - ⚠️ **Attention** : Ne jamais inclure de données sensibles (mots de passe, numéros de carte de crédit)
+### 2.2 Pourquoi le JWT pour une API REST ?
 
-##### 3. Signature
-**Garantit l'intégrité et l'authenticité du token** - C'est LE mécanisme de sécurité des JWT :
+Une API REST est souvent **stateless** : le client envoie un token à chaque requête (`Authorization: Bearer …`), sans session serveur.
+
+| | JWT | Session + cookie |
+|---|-----|------------------|
+| État serveur | Non (token auto-porté) | Oui (store de sessions) |
+| Scalabilité | Facile (plusieurs instances) | Plus délicate (store partagé) |
+| Révocation | Plus difficile | Simple (supprimer la session) |
+
+### 2.3 Structure d’un JWT
+
+Un JWT a trois parties séparées par des points : `header.payload.signature`.
+
+- **Header** : algorithme (ex. HS256), type (`JWT`)
+- **Payload** : claims (`sub`, `exp`, `iat`, rôle, email…) — **encodé en Base64URL, pas chiffré** : ne jamais y mettre de secrets
+- **Signature** : garantit l’intégrité avec une clé secrète
+
+Le détail (encodage vs chiffrement, calcul HMAC, JWS / JWE) est développé en [séance 9 — Anatomie technique d’un JWT](./9_securite.md#jwt-internals).
+
+### 2.4 Génération et vérification (essentiel)
 
 ```javascript
-// Pour HS256 (HMAC SHA256)
-HMACSHA256(
-  base64UrlEncode(header) + "." + base64UrlEncode(payload),
-  secret
-)
-```
-
-**Comment la sécurité est assurée :**
-
-1. **Processus de création de la signature :**
-   ```javascript
-   // 1. Concaténation des parties encodées
-   const message = base64UrlEncode(header) + "." + base64UrlEncode(payload);
-   
-   // 2. Calcul du hash cryptographique avec la clé secrète
-   const signature = crypto
-     .createHmac('sha256', SECRET_KEY)  // Clé secrète connue SEULEMENT du serveur
-     .update(message)                   // Message à signer
-     .digest('base64url');              // Résultat en base64url
-   ```
-
-2. **Processus de vérification :**
-   ```javascript
-   // Côté serveur, lors de la réception d'un token
-   const [receivedHeader, receivedPayload, receivedSignature] = token.split('.');
-   
-   // Recalcul de la signature attendue
-   const expectedSignature = crypto
-     .createHmac('sha256', SECRET_KEY)
-     .update(`${receivedHeader}.${receivedPayload}`)
-     .digest('base64url');
-   
-   // Comparaison sécurisée
-   if (crypto.timingSafeEqual(
-     Buffer.from(expectedSignature), 
-     Buffer.from(receivedSignature)
-   )) {
-     console.log('✅ Token authentique et non modifié');
-   } else {
-     console.log('❌ Token invalide ou modifié');
-   }
-   ```
-
-**Types d'algorithmes de signature et leur sécurité :**
-
-- **HS256** (HMAC SHA256) : 
-  - 🔑 **Clé symétrique** : Même clé pour signer et vérifier
-  - ✅ **Avantages** : Rapide, simple à implémenter
-  - ⚠️ **Inconvénients** : Tous les services doivent partager la même clé secrète
-  - 🔐 **Sécurité** : Repose sur le secret de la clé partagée
-
-- **RS256** (RSA SHA256) :
-  - 🔑 **Clé asymétrique** : Clé privée pour signer, clé publique pour vérifier
-  - ✅ **Avantages** : Permet la distribution de la vérification sans partager la clé de signature
-  - ⚠️ **Inconvénients** : Plus lent, plus complexe
-  - 🔐 **Sécurité** : Repose sur la cryptographie à clé publique
-
-- **ES256** (ECDSA SHA256) :
-  - 🔑 **Courbes elliptiques** : Plus efficace que RSA pour la même sécurité
-  - ✅ **Avantages** : Signatures plus courtes, meilleure performance
-  - ⚠️ **Inconvénients** : Support moins universel
-  - 🔐 **Sécurité** : Repose sur le problème du logarithme discret sur courbes elliptiques
-
-**Exemple pratique de tentative d'attaque :**
-
-```javascript
-// ❌ Tentative de modification malveillante d'un token
-const originalToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjMiLCJyb2xlIjoidXNlciJ9.signature";
-
-// Un attaquant essaie de modifier le payload pour devenir admin
-const maliciousPayload = {
-  userId: "123",
-  role: "admin"  // ❌ Modification malveillante
-};
-
-const encodedMaliciousPayload = Buffer.from(JSON.stringify(maliciousPayload)).toString('base64url');
-const [header, , originalSignature] = originalToken.split('.');
-
-// Token modifié avec l'ancienne signature
-const tamperedToken = `${header}.${encodedMaliciousPayload}.${originalSignature}`;
-
-// ✅ Le serveur détecte la modification lors de la vérification
-const verifyTamperedToken = (token, secret) => {
-  const [h, p, s] = token.split('.');
-  const expectedSig = crypto.createHmac('sha256', secret).update(`${h}.${p}`).digest('base64url');
-  
-  if (expectedSig !== s) {
-    throw new Error('🚨 ATTAQUE DÉTECTÉE : Token modifié !');
-  }
-};
-```
-
-**Pourquoi la signature est inviolable :**
-- Sans la clé secrète, impossible de générer une signature valide
-- Toute modification du header ou payload invalide la signature
-- Les algorithmes cryptographiques utilisés sont computationnellement sûrs
-- La vérification détecte immédiatement toute tentative de falsification
-
-
-#### ⚠️ **IMPORTANT : Encodage vs Chiffrement dans les JWT**
-
-**Les JWT ne sont PAS chiffrés !** Il s'agit d'une confusion courante mais critique pour la sécurité :
-
-**Ce qui est ENCODÉ (Base64URL) :**
-- ✅ **Header** : `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9` → `{"alg":"HS256","typ":"JWT"}`
-- ✅ **Payload** : `eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ` → `{"userId":"1234567890","name":"John Doe","iat":1516239022}`
-
-**Ce qui est CRYPTOGRAPHIQUEMENT SÉCURISÉ :**
-- 🔐 **Signature** : `SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c` → Hash cryptographique HMAC-SHA256
-
-**Démonstration pratique :**
-
-```javascript
-// N'importe qui peut décoder le contenu d'un JWT
-const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-
-const [header, payload, signature] = token.split('.');
-
-// Décodage du header (sans clé secrète !)
-const decodedHeader = JSON.parse(Buffer.from(header, 'base64url').toString());
-console.log(decodedHeader); // {"alg":"HS256","typ":"JWT"}
-
-// Décodage du payload (sans clé secrète !)
-const decodedPayload = JSON.parse(Buffer.from(payload, 'base64url').toString());
-console.log(decodedPayload); // {"userId":"1234567890","name":"John Doe","iat":1516239022}
-
-// ⚠️ La signature ne peut être vérifiée QUE avec la clé secrète
-```
-
-**Implications de sécurité critiques :**
-
-1. **❌ JAMAIS de données sensibles dans le payload** :
-   ```javascript
-   // ❌ DANGEREUX - Visible par tous !
-   const badPayload = {
-     userId: "123",
-     password: "secret123",        // ❌ Lisible par tous !
-     creditCard: "1234-5678-9012", // ❌ Lisible par tous !
-     apiKey: "sk_live_abc123"      // ❌ Lisible par tous !
-   };
-   
-   // ✅ CORRECT - Données non sensibles uniquement
-   const goodPayload = {
-     userId: "123",
-     email: "user@example.com",    // ✅ Information publique
-     role: "user",                 // ✅ Information de contexte
-     permissions: ["read"]         // ✅ Information de contexte
-   };
-   ```
-
-2. **🔐 La sécurité repose uniquement sur la signature** :
-   - La signature garantit que le token n'a pas été modifié
-   - Elle confirme que le token provient d'une source de confiance (qui possède la clé secrète)
-   - Elle ne cache PAS le contenu du payload
-
-3. **🔍 Vérification de l'intégrité** :
-   ```javascript
-   // Processus de vérification d'un JWT
-   const verifyJWT = (token, secret) => {
-     const [header, payload, signature] = token.split('.');
-     
-     // 1. Recalculer la signature avec la clé secrète
-     const expectedSignature = crypto
-       .createHmac('sha256', secret)
-       .update(`${header}.${payload}`)
-       .digest('base64url');
-     
-     // 2. Comparer avec la signature fournie
-     if (expectedSignature !== signature) {
-       throw new Error('Token modifié ou invalide !');
-     }
-     
-     // 3. Si les signatures correspondent → token authentique
-     return JSON.parse(Buffer.from(payload, 'base64url').toString());
-   };
-   ```
-
-**En résumé :**
-- 📖 **Encodage Base64URL** : Permet la transmission et le stockage facile (lisible par tous)
-- 🔐 **Signature cryptographique** : Garantit l'authenticité et l'intégrité (vérifiable seulement avec la clé secrète)
-- ⚠️ **Pas de chiffrement** : Le contenu est visible, ne jamais y mettre de données sensibles !
-
-#### Implémentation pratique avec Node.js
-
-**Génération complète d'un JWT :**
-
-```javascript
-import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
-const generateToken = (user) => {
-  // Payload avec claims standards et personnalisés
-  const payload = {
-    // Claims standards
-    sub: user._id,                    // Subject (ID utilisateur)
-    iat: Math.floor(Date.now() / 1000), // Issued at
-    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // Expire dans 24h
-    iss: 'my-app',                    // Issuer
-    aud: 'my-app-users',              // Audience
-    
-    // Claims personnalisés
-    email: user.email,
-    role: user.role,
-    permissions: user.permissions,
-    username: user.username
-  };
-
-  // Options supplémentaires
-  const options = {
-    algorithm: 'HS256',               // Algorithme de signature
-    expiresIn: '24h',                 // Alternative à exp dans payload
-    issuer: 'my-app',                 // Alternative à iss dans payload
-    audience: 'my-app-users',         // Alternative à aud dans payload
-    subject: user._id.toString(),     // Alternative à sub dans payload
-    jwtid: generateUniqueId()         // ID unique pour le token
-  };
-
-  return jwt.sign(payload, process.env.JWT_SECRET, options);
+const generateToken = (userId) => {
+  return jwt.sign(
+    { userId },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
 };
 
-// Fonction helper pour générer un ID unique
-const generateUniqueId = () => {
-  return crypto.randomBytes(16).toString('hex');
-};
-```
-
-**Vérification et décodage :**
-
-```javascript
 const verifyToken = (token) => {
-  try {
-    // Options de vérification
-    const options = {
-      algorithms: ['HS256'],           // Algorithmes acceptés
-      issuer: 'my-app',               // Vérifier l'émetteur
-      audience: 'my-app-users',       // Vérifier l'audience
-      clockTolerance: 30,             // Tolérance de 30 secondes pour l'horloge
-      maxAge: '24h'                   // Age maximum du token
-    };
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET, options);
-    
-    // Vérifications supplémentaires
-    if (!decoded.sub || !decoded.email) {
-      throw new Error('Token invalide : claims manquants');
-    }
-
-    return {
-      valid: true,
-      payload: decoded,
-      userId: decoded.sub,
-      email: decoded.email,
-      role: decoded.role
-    };
-
-  } catch (error) {
-    return {
-      valid: false,
-      error: error.message,
-      expired: error.name === 'TokenExpiredError',
-      invalid: error.name === 'JsonWebTokenError'
-    };
-  }
+  return jwt.verify(token, process.env.JWT_SECRET);
 };
-```
 
-**Middleware d'authentification complet :**
-
-```javascript
-const jwtMiddleware = async (req, res, next) => {
+// Middleware typique
+const authMiddleware = (req, res, next) => {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token manquant' });
+  }
   try {
-    // 1. Extraction du token
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: 'Token manquant',
-        message: 'Format attendu: Authorization: Bearer <token>'
-      });
-    }
-
-    const token = authHeader.substring(7); // Enlever "Bearer "
-
-    // 2. Vérification du token
-    const verification = verifyToken(token);
-    if (!verification.valid) {
-      const statusCode = verification.expired ? 401 : 403;
-      return res.status(statusCode).json({
-        error: verification.expired ? 'Token expiré' : 'Token invalide',
-        details: verification.error
-      });
-    }
-
-    // 3. Enrichissement de la requête
-    req.user = verification.payload;
-    req.userId = verification.userId;
-    req.userRole = verification.role;
-
-    // 4. Vérifications métier supplémentaires (optionnel)
-    const user = await User.findById(verification.userId);
-    if (!user || !user.active) {
-      return res.status(401).json({
-        error: 'Utilisateur inactif ou supprimé'
-      });
-    }
-
+    req.user = verifyToken(header.slice(7));
     next();
-
-  } catch (error) {
-    console.error('Erreur middleware JWT:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+  } catch {
+    return res.status(401).json({ error: 'Token invalide ou expiré' });
   }
 };
 ```
 
-#### Gestion du cycle de vie des tokens
+Dans le projet de cette séance, la génération du JWT vit dans le **service** ; la vérification dans un **middleware**.
 
-**Refresh Tokens pour la sécurité renforcée :**
+::: tip Pour aller plus loin (séance 9)
+- [Anatomie technique](./9_securite.md#jwt-internals) · [Encodage ≠ chiffrement](./9_securite.md#jwt-encoding) · [JWS / JWE](./9_securite.md#jose)
+- [Configuration JWT stricte](./9_securite.md#jwt-strict) (`issuer` / `audience` / `jti`)
+- [Refresh tokens](./9_securite.md#refresh-tokens)
+- [HTTPS](./9_securite.md#https) · [Helmet](./9_securite.md#helmet) · [CORS granulaire](./9_securite.md#cors)
+- [Sessions sécurisées](./9_securite.md#sessions)
+:::
 
-```javascript
-class TokenService {
-  // Génération de paire access/refresh tokens
-  static generateTokenPair(user) {
-    // Access token courte durée (15 minutes)
-    const accessToken = jwt.sign(
-      { 
-        sub: user._id, 
-        email: user.email, 
-        role: user.role,
-        type: 'access'
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '15m' }
-    );
+---
 
-    // Refresh token longue durée (7 jours)
-    const refreshToken = jwt.sign(
-      {
-        sub: user._id,
-        type: 'refresh',
-        jti: crypto.randomBytes(16).toString('hex') // ID unique
-      },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: '7d' }
-    );
+## 3. Architecture en couches
 
-    return { accessToken, refreshToken };
-  } 
+Une API Express se structure en **couches** (*layered architecture*) : chaque dossier a une responsabilité précise. L’objectif est de pouvoir modifier une partie (stockage, règles métier, format HTTP) sans tout casser.
 
-  // Renouvellement des tokens
-  static async refreshAccessToken(refreshToken) {
-    try {
-      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-      
-      if (decoded.type !== 'refresh') {
-        throw new Error('Type de token invalide');
-      }
+### 3.1 Schéma mural (à garder sous les yeux)
 
-      // Vérifier que le refresh token existe en base (pour révocation)
-      const tokenRecord = await RefreshToken.findOne({ 
-        userId: decoded.sub, 
-        tokenId: decoded.jti 
-      });
+Les libellés du diagramme restent courts (Mermaid coupe sinon le texte). Les responsabilités détaillées sont dans le tableau juste en dessous et au § 3.2.
 
-      if (!tokenRecord || tokenRecord.revoked) {
-        throw new Error('Refresh token révoqué');
-      }
+```mermaid
+flowchart TB
+  Client[Client HTTP]
+  App[app.js]
+  Routes[routes]
+  MW[middleware]
+  Ctrl[controllers]
+  Svc[services]
+  Model[models]
+  Repo[repositories]
+  Store[(Stockage)]
 
-      // Récupérer l'utilisateur
-      const user = await User.findById(decoded.sub);
-      if (!user) {
-        throw new Error('Utilisateur non trouvé');
-      }
-
-      // Générer nouveau access token
-      const newAccessToken = jwt.sign(
-        { 
-          sub: user._id, 
-          email: user.email, 
-          role: user.role,
-          type: 'access'
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '15m' }
-      );
-
-      return { accessToken: newAccessToken };
-
-    } catch (error) {
-      throw new Error('Refresh token invalide');
-    }
-  }
-
-  // Révocation des tokens (logout)
-  static async revokeTokens(userId, tokenId = null) {
-    if (tokenId) {
-      // Révoquer un token spécifique
-      await RefreshToken.updateOne(
-        { userId, tokenId },
-        { revoked: true, revokedAt: new Date() }
-      );
-    } else {
-      // Révoquer tous les tokens de l'utilisateur
-      await RefreshToken.updateMany(
-        { userId },
-        { revoked: true, revokedAt: new Date() }
-      );
-    }
-  }
-}
+  Client --> App --> Routes --> MW --> Ctrl
+  Ctrl -->|appelle| Svc
+  Svc --> Model
+  Svc --> Repo
+  Repo -->|hydrate| Model
+  Repo --> Store
+  Ctrl -->|réponse JSON| Client
 ```
 
-#### Sécurisation avancée des JWT
+**Sens des flèches = appels autorisés.** Le modèle ne pointe vers personne : il est indépendant.
 
-**1. Configuration sécurisée :**
+| Couche | Rôle | Fait | Ne fait pas | Dépend de |
+|--------|------|------|-------------|-----------|
+| **app.js** | Démarrage | Config globale, montage des routes | Métier, DB | — |
+| **routes/** | URL → handlers | Méthode + chemin + middlewares + controller | Règles métier | middleware, controllers |
+| **middleware/** | Contrôles transverses | Auth JWT, validation, admin, erreurs | Créer un user, envoyer un mail | parfois repository |
+| **controllers/** | Couche HTTP | Lit `req`, appelle le service, status + JSON | `User`, repository, `fs` | **service uniquement** |
+| **services/** | Métier | Règles, orchestre Model + Repo, JWT | `req` / `res` | Model + Repository |
+| **models/** | Entité | Champs, `hashPassword`, `toJSON` | Repo, Express, stockage | **personne** |
+| **repositories/** | Persistance | CRUD, hydratation `new User` | JWT, règles métier | Model + stockage |
+
+::: tip Mémo mural
+```
+Controller  →  Service  →  Model
+                       ↘  Repository  →  Model
+                                      ↘  Stockage
+```
+Règle d’or : dépendances **vers le bas** seulement. Jamais un model qui importe un repository ou Express.
+:::
+
+### 3.2 Responsabilités détaillées
+
+#### Point d’entrée — `app.js`
+
+**Fait :** configure Express (JSON, CORS, Helmet, rate limit), monte les routeurs (`/api/auth`, `/api/users`), branche le gestionnaire d’erreurs, démarre le serveur.
+
+**Ne fait pas :** logique métier, accès aux fichiers/DB, construction de réponses métier.
+
+#### Routage — `routes/`
+
+**Fait :** associe une méthode + URL à une chaîne de middlewares puis à une fonction de controller.
 
 ```javascript
-// Générateur de secret fort
-const generateJWTSecret = () => {
-  return crypto.randomBytes(64).toString('hex');
-};
-
-// Variables d'environnement recommandées
-const jwtConfig = {
-  accessTokenSecret: process.env.JWT_ACCESS_SECRET,     // 64+ caractères aléatoires
-  refreshTokenSecret: process.env.JWT_REFRESH_SECRET,   // Différent de l'access secret
-  accessTokenExpiry: '15m',                             // Courte durée
-  refreshTokenExpiry: '7d',                             // Durée raisonnable
-  algorithm: 'HS256',                                   // Ou RS256 pour plus de sécurité
-  issuer: process.env.APP_NAME,
-  audience: `${process.env.APP_NAME}-users`
-};
+router.put(
+  '/profile',
+  authMiddleware,              // qui es-tu ?
+  updateProfileValidation,     // le body est-il valide ?
+  userController.updateProfile // traitement HTTP
+);
 ```
 
-**2. Protection contre les attaques :**
+**Ne fait pas :** lire `req.body` pour décider d’une règle métier, appeler le repository.
+
+#### Middleware — `middleware/`
+
+Fonctions qui s’exécutent **avant** (ou autour) du controller.
+
+| Middleware typique | Responsabilité |
+|--------------------|----------------|
+| `auth.js` | Vérifier le JWT, enrichir `req.user` |
+| `validation.js` | Valider / normaliser le body (express-validator) |
+| `admin.js` | Vérifier le rôle (autorisation) |
+| `errorHandler.js` | Formater les erreurs non gérées en JSON |
+
+**Fait :** contrôles transverses réutilisables sur plusieurs routes.
+
+**Ne fait pas :** « créer un utilisateur », « envoyer un email de bienvenue », décisions métier complexes (ça va dans le **service**).
+
+Exception pédagogique : `auth` / `admin` peuvent appeler le **repository** juste pour vérifier que l’utilisateur existe encore.
+
+#### Controller — `controllers/`
+
+Couche **HTTP** : pont entre Express et le service.
+
+**Responsabilités :**
+1. Lire ce qui vient de HTTP (`req.body`, `req.params`, `req.user`)
+2. Appeler le **service**
+3. Choisir le **code de statut** et le **JSON** de réponse
+4. Traduire les erreurs métier du service (`AuthError`, `UserError`) en réponses HTTP
 
 ```javascript
-// Protection contre les attaques par timing
-const safeCompare = (a, b) => {
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
-};
-
-// Validation stricte des claims
-const validateClaims = (payload) => {
-  const requiredClaims = ['sub', 'iat', 'exp'];
-  const missingClaims = requiredClaims.filter(claim => !payload[claim]);
-  
-  if (missingClaims.length > 0) {
-    throw new Error(`Claims manquants: ${missingClaims.join(', ')}`);
-  }
-
-  // Vérification de la date d'expiration
-  const now = Math.floor(Date.now() / 1000);
-  if (payload.exp <= now) {
-    throw new Error('Token expiré');
-  }
-
-  // Vérification de la date de début de validité
-  if (payload.nbf && payload.nbf > now) {
-    throw new Error('Token pas encore valide');
-  }
-
-  return true;
-};
-```
-
-#### Comparaison JWT vs Sessions
-
-| Aspect | JWT | Sessions |
-|--------|-----|----------|
-| **Stockage serveur** | ❌ Aucun | ✅ État stocké |
-| **Scalabilité** | ✅ Excellent | ❌ Limité |
-| **Révocation** | ❌ Complexe | ✅ Immédiate |
-| **Taille des données** | ❌ Limite (8KB) | ✅ Illimitée |
-| **Sécurité XSS** | ⚠️ Stockage client | ✅ HttpOnly cookies |
-| **Performance** | ✅ Pas de DB lookup | ❌ Lookup à chaque requête |
-| **Applications distribuées** | ✅ Parfait | ❌ Session sharing complexe |
-
-#### Bonnes pratiques JWT
-
-**✅ À faire :**
-- Utiliser HTTPS obligatoirement
-- Stocker les tokens dans httpOnly cookies (côté web) ou stockage sécurisé (mobile)
-- Implémenter des refresh tokens
-- Utiliser des durées courtes pour les access tokens (15-30 minutes)
-- Valider tous les claims
-- Implémenter une blacklist pour la révocation critique
-- Logger les tentatives d'utilisation de tokens invalides
-
-**❌ À éviter :**
-- Stocker des données sensibles dans le payload
-- Utiliser des secrets faibles ou réutilisés
-- Négliger la validation des claims
-- Oublier la gestion de l'expiration
-- Stocker les tokens dans localStorage (web) - vulnérable aux XSS
-
-```javascript
-// Exemple de bonnes pratiques pour le stockage côté client
-// ✅ Cookies sécurisés (recommandé pour web)
-res.cookie('accessToken', token, {
-  httpOnly: true,      // Pas accessible via JavaScript
-  secure: true,        // HTTPS uniquement
-  sameSite: 'strict',  // Protection CSRF
-  maxAge: 15 * 60 * 1000  // 15 minutes
-});
-
-// ❌ localStorage (vulnérable aux XSS)
-// localStorage.setItem('token', token); // À éviter !
-```
-
-Cette approche complète des JWT permet aux étudiants de comprendre non seulement le fonctionnement technique, mais aussi les implications de sécurité et les meilleures pratiques pour une implémentation robuste en production.
-
-**3. OAuth 2.0 avec Node.js**
-Délégation d'accès via des providers externes (Google, GitHub, Facebook) :
-
-```javascript
-import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "/auth/google/callback"
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    // Trouver ou créer l'utilisateur
-    let user = await User.findOne({ googleId: profile.id });
-    if (!user) {
-      user = await User.create({
-        googleId: profile.id,
-        email: profile.emails[0].value,
-        name: profile.displayName
-      });
-    }
-    return done(null, user);
-  } catch (error) {
-    return done(error, null);
-  }
-}));
-```
-
-**4. API Keys**
-Clés d'identification simples pour les APIs :
-
-```javascript
-const apiKeyMiddleware = async (req, res, next) => {
-  const apiKey = req.headers['x-api-key'];
-  
-  if (!apiKey) {
-    return res.status(401).json({ error: 'API key required' });
-  }
-  
-  try {
-    const client = await ApiKey.findOne({ key: apiKey, active: true });
-    if (!client) {
-      return res.status(401).json({ error: 'Invalid API key' });
-    }
-    
-    req.client = client;
-    next();
-  } catch (error) {
-    res.status(500).json({ error: 'Authentication error' });
-  }
-};
-```
-
-#### Sécurisation des applications Node.js/Express
-
-**HTTPS : Communication chiffrée :**
-
-En production, HTTPS est obligatoire. Avec Express :
-
-```javascript
-import https from 'https';
-import fs from 'fs';
-
-const options = {
-  key: fs.readFileSync('path/to/private-key.pem'),
-  cert: fs.readFileSync('path/to/certificate.pem')
-};
-
-https.createServer(options, app).listen(443, () => {
-  console.log('HTTPS server running on port 443');
-});
-
-// Redirection HTTP vers HTTPS
-app.use((req, res, next) => {
-  if (req.header('x-forwarded-proto') !== 'https') {
-    res.redirect(`https://${req.header('host')}${req.url}`);
-  } else {
-    next();
-  }
-});
-```
-
-**CORS (Cross-Origin Resource Sharing) :**
-
-Configuration précise des accès cross-origin :
-
-```javascript
-import cors from 'cors';
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'https://yourdomain.com',
-      'https://app.yourdomain.com'
-    ];
-    
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true, // Autorise les cookies
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-```
-
-**Content Security Policy (CSP) :**
-Protection contre les attaques XSS :
-
-```javascript
-import helmet from 'helmet';
-
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"]
-    }
-  }
-}));
-```
-
-### 1.3 Validation et gestion d'erreurs avec Express
-
-#### Validation des entrées avec Joi et express-validator
-
-**Avec Joi :**
-
-```javascript
-import Joi from 'joi';
-
-const userSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(8).pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])')).required(),
-  name: Joi.string().min(2).max(50).required(),
-  age: Joi.number().integer().min(18).max(120)
-});
-
-const validateUser = (req, res, next) => {
-  const { error, value } = userSchema.validate(req.body);
-  
-  if (error) {
-    return res.status(400).json({
-      error: 'Validation failed',
-      details: error.details.map(detail => ({
-        field: detail.path.join('.'),
-        message: detail.message
-      }))
-    });
-  }
-  
-  req.validatedData = value;
-  next();
-};
-```
-
-**Avec express-validator :**
-```javascript
-import { body, validationResult } from 'express-validator';
-
-const validateUserRules = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Email valide requis'),
-  
-  body('password')
-    .isLength({ min: 8 })
-    .withMessage('Le mot de passe doit contenir au moins 8 caractères')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])/)
-    .withMessage('Le mot de passe doit contenir au moins une minuscule, une majuscule, un chiffre et un caractère spécial'),
-  
-  body('name')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Le nom doit contenir entre 2 et 50 caractères')
-    .escape() // Protection contre XSS
-];
-
-const handleValidationErrors = (req, res, next) => {
+export const register = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
-      error: 'Validation failed',
-      details: errors.array()
-    });
+    return res.status(400).json({ success: false, errors: errors.array() });
   }
-  next();
+  try {
+    const data = await authService.register(req.body);
+    res.status(201).json({ success: true, data });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
 };
 ```
 
-#### Gestion d'erreurs structurée
+**Ne fait pas :**
+- `new User(...)` ou `userRepository.save(...)`
+- hasher un mot de passe
+- décider si un email est déjà pris (règle métier → service)
+- toucher à `fs` / SQL / MongoDB
 
-**Middleware de gestion d'erreurs global :**
-```javascript
-// Classes d'erreurs personnalisées
-class AppError extends Error {
-  constructor(message, statusCode, isOperational = true) {
-    super(message);
-    this.statusCode = statusCode;
-    this.isOperational = isOperational;
-    this.timestamp = new Date().toISOString();
-    
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
+#### Service — `services/`
 
-class ValidationError extends AppError {
-  constructor(message) {
-    super(message, 400);
-  }
-}
+**Orchestrateur métier** : le seul endroit qui combine modèle + repository (+ JWT, mails, etc.).
 
-class AuthenticationError extends AppError {
-  constructor(message = 'Authentication required') {
-    super(message, 401);
-  }
-}
-
-class AuthorizationError extends AppError {
-  constructor(message = 'Insufficient permissions') {
-    super(message, 403);
-  }
-}
-
-// Middleware de gestion d'erreurs
-const errorHandler = (err, req, res, next) => {
-  // Log de l'erreur
-  console.error({
-    error: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    timestamp: new Date().toISOString()
-  });
-  
-  // Erreurs opérationnelles prévues
-  if (err.isOperational) {
-    return res.status(err.statusCode).json({
-      error: err.message,
-      timestamp: err.timestamp,
-      path: req.path
-    });
-  }
-  
-  // Erreurs de validation personnalisées
-  if (err.name === 'ValidationError') {
-    return res.status(400).json({
-      error: 'Validation failed',
-      details: err.message
-    });
-  }
-  
-  // Erreurs JWT
-  if (err.name === 'JsonWebTokenError') {
-    return res.status(401).json({
-      error: 'Invalid token'
-    });
-  }
-  
-  if (err.name === 'TokenExpiredError') {
-    return res.status(401).json({
-      error: 'Token expired'
-    });
-  }
-  
-  // Erreurs non prévues
-  res.status(500).json({
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : err.message
-  });
-};
-
-// Gestionnaire pour les routes non trouvées
-const notFoundHandler = (req, res, next) => {
-  const error = new AppError(`Route ${req.originalUrl} not found`, 404);
-  next(error);
-};
-
-app.use(notFoundHandler);
-app.use(errorHandler);
-```
-
-#### Rate Limiting avec Express
-
-Protection contre les attaques par déni de service et les abus :
+**Responsabilités :**
+- Règles métier : unicité email/username, mot de passe différent de l’ancien, etc.
+- Créer / manipuler des instances de **Model**
+- Appeler le **Repository** pour lire/écrire
+- Produire des résultats utilisables par le controller (objets plain, tokens…)
+- Lever des erreurs métier typées (`throw new AuthError('…', 401)`)
 
 ```javascript
-import rateLimit from 'express-rate-limit';
-
-// Rate limiting global (stockage en mémoire)
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Maximum 100 requêtes par fenêtre
-  message: {
-    error: 'Too many requests',
-    retryAfter: Math.round(15 * 60) // en secondes
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-// Rate limiting spécifique pour l'authentification
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Maximum 5 tentatives de connexion
-  skipSuccessfulRequests: true, // Ne pas compter les connexions réussies
-  message: {
-    error: 'Too many authentication attempts, please try again later'
+export const register = async ({ username, email, password }) => {
+  if (await userRepository.findOne({ email })) {
+    throw new AuthError('Email déjà utilisé', 400);
   }
-});
-
-app.use('/api', globalLimiter);
-app.use('/api/auth', authLimiter);
+  const user = new User({ username, email, password });
+  await user.hashPassword();          // comportement du modèle
+  await userRepository.save(user);    // persistance
+  return { user: user.toJSON(), token: generateToken(user.id) };
+};
 ```
 
-## 2. Application pratique avec Node.js et Express
-### 2.1 Création d'une API RESTful simple
+**Ne fait pas :**
+- manipuler `req` / `res` (pas de dépendance à Express)
+- formater les codes HTTP (le controller s’en charge à partir de `error.status`)
+- détails bas niveau du stockage (chemins de fichiers, requêtes SQL brutes)
 
-Avant de plonger dans l'implémentation complète, voici un exemple simple d'API RESTful basique pour comprendre les concepts fondamentaux ([📁 Voir sur GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance6/api-simple)) :
+#### Model — `models/`
+
+**Entité métier indépendante** : structure + comportements liés à l’objet lui-même.
+
+**Responsabilités :**
+- Définir les champs (`id`, `email`, `password`, `role`…)
+- Comportements de l’entité : `hashPassword()`, `comparePassword()`, `toJSON()` (masquer le hash)
+
+**Ne fait pas :**
+- importer un repository ou un service
+- lire/écrire un fichier ou une base
+- connaître HTTP ou JWT
+
+Le modèle doit rester testable **sans** démarrer Express ni toucher au disque.
+
+#### Repository — `repositories/`
+
+**Accès aux données** : seule couche autorisée à parler au stockage (JSON, SQL, MongoDB…).
+
+**Responsabilités :**
+- CRUD : `save`, `findById`, `findOne`, `find`, `findByIdAndUpdate`…
+- **Hydratation** : à la lecture, reconstruire `new User(data)`
+- À l’écriture : sérialiser les champs nécessaires vers le store
+
+**Ne fait pas :**
+- vérifier l’unicité « métier » au-delà d’une contrainte technique éventuelle
+- hasher le mot de passe (le **service** appelle `user.hashPassword()` avant `save`)
+- générer un JWT
+- renvoyer des réponses HTTP
+
+::: warning Model ≠ Repository
+| | Model | Repository |
+|--|-------|------------|
+| Répond à | *Quoi ?* (l’entité) | *Où / comment persister ?* |
+| Change si… | les règles de l’entité changent | on change JSON → MongoDB / SQL |
+| Exemple | `comparePassword` | `findById` lit `users.prod.json` |
+
+Si demain on remplace le fichier JSON par MongoDB, on modifie **surtout le repository**. Modèle, services et controllers restent conceptuellement les mêmes.
+:::
+
+### 3.3 Flux complet d’une requête
+
+Exemple : `PUT /api/users/profile` (utilisateur authentifié qui change son email).
+
+```
+1. Client          →  PUT /api/users/profile + Bearer token + body
+2. app.js          →  middlewares globaux (cors, json, …)
+3. userRoutes      →  authMiddleware → validation → userController.updateProfile
+4. authMiddleware  →  vérifie le JWT, pose req.user.userId
+5. validation      →  email au bon format ?
+6. controller      →  userService.updateProfile(userId, body)
+7. service         →  email déjà pris par un autre ? → sinon repository.update
+8. repository      →  lit/écrit le JSON, retourne un User
+9. service         →  return user.toJSON()
+10. controller     →  res.json({ success: true, data: user })
+```
+
+### 3.4 Anti-patterns à éviter
+
+| Anti-pattern | Pourquoi c’est un problème | À la place |
+|--------------|----------------------------|------------|
+| Controller qui appelle le repository | Logique métier dupliquée / oubliée | Passer par le **service** |
+| Model qui fait `fs.readFile` | Entité couplée au stockage | **Repository** |
+| Repository qui génère le JWT | Mélange persistance et auth | **Service** |
+| Service qui fait `res.status(400)` | Couplage à Express, difficile à tester | `throw` une erreur métier ; le controller répond |
+| Tout dans `app.js` | Illisible, non testable | Respecter les dossiers ci-dessus |
+
+### 3.5 Pourquoi cette séparation ?
+
+- **Maintenabilité** : un bug d’écriture JSON se corrige dans le repository, pas dans 5 controllers
+- **Testabilité** : on mocke le repository pour tester le service sans fichiers
+- **Évolutivité** : ajouter « envoi d’email à l’inscription » = enrichir le service, sans toucher aux routes
+- **Lisibilité** : un nouvel étudiant sait où chercher chaque type de code
+
+Le code du projet (§ 4.2) suit exactement cette organisation : les fichiers en `@include` illustrent ces responsabilités, sans les redéfinir.
+
+---
+
+## 4. Mise en pratique
+
+### 4.1 API RESTful simple
+
+Premier contact avec Express et le CRUD en mémoire ([📁 GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance6/api-simple)).
 
 ::: details api-simple/server.js
 <!-- @include:start api-simple/server.js -->
@@ -1267,256 +554,32 @@ app.listen(PORT, () => {
 <!-- @include:end api-simple/package.json -->
 :::
 
-### 2.2 Création d'une API RESTful complète
+### 4.2 Projet complet : gestion d’utilisateurs
 
-Dans cette section, nous allons construire une API RESTful complète pour la gestion d'utilisateurs en utilisant Node.js et Express. Cette application démontrera tous les concepts théoriques abordés précédemment ([📁 Voir sur GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance6/api-project)).
+API avec JWT, rôles, validation et architecture en couches ([📁 GitHub](https://github.com/fpluquet/web_client_serveur/tree/main/code/seance6/api-project)).
 
-#### Structure du projet
+Stockage pédagogique en **fichiers JSON** (pas de DB ici — voir [séance 7](./7_db.md)).
+
+#### Structure
 
 ```
 api-project/
 ├── src/
-│   ├── controllers/
-│   │   ├── authController.js
-│   │   └── userController.js
-│   ├── middleware/
-│   │   ├── auth.js
-│   │   ├── validation.js
-│   │   └── errorHandler.js
-│   ├── models/
-│   │   └── User.js                 # Entité métier (sans persistance)
-│   ├── repositories/
-│   │   └── UserRepository.js       # Accès aux données (CRUD / stockage)
+│   ├── controllers/     # HTTP → appelle les services
+│   ├── middleware/      # auth, validation, admin, erreurs
+│   ├── models/          # User (indépendant)
+│   ├── repositories/    # UserRepository (CRUD JSON)
+│   ├── services/        # authService, userService
 │   ├── routes/
-│   │   ├── authRoutes.js
-│   │   └── userRoutes.js
-│   ├── services/                   # Règles métier (orchestre model + repo)
-│   │   ├── authService.js
-│   │   └── userService.js
 │   └── app.js
 ├── tests/
 ├── package.json
 └── .env
 ```
 
-#### Architecture en couches : Comprendre le rôle de chaque composant
+Les fichiers ci-dessous illustrent l’architecture de la section 3 — **sans la redécrire**.
 
-Cette application RESTful suit une **architecture en couches** (layered architecture) qui sépare les responsabilités pour améliorer la maintenabilité, la testabilité et la scalabilité du code.
-
-::: tip Qui parle à qui ?
-```
-Controller  →  Service  →  Model
-                      ↘  Repository  →  Model (hydratation)
-```
-
-| Couche | Question | Dépend de |
-|--------|----------|-----------|
-| **Model** | *Qu'est-ce qu'un utilisateur ?* | personne (indépendant) |
-| **Repository** | *Comment le stocker / le retrouver ?* | Model (hydrate `new User(...)`) |
-| **Service** | *Quelle règle métier appliquer ?* | Model + Repository |
-| **Controller** | *Comment répondre en HTTP ?* | Service uniquement |
-
-Le **modèle** n'importe ni repository ni service.  
-Le **service** est le seul orchestrateur métier : unicité email, hashage avant save, JWT, etc.  
-Le **repository** fait uniquement le CRUD.
-:::
-
-Voici le rôle de chaque couche :
-
-##### 1. **Couche d'entrée - Point d'entrée de l'application (`app.js`)**
-
-```javascript
-// Configuration centralisée des middlewares, routes et serveur
-app.use(helmet());           // Sécurité HTTP
-app.use('/api/auth', authRoutes);  // Routage
-app.use(errorHandler);       // Gestion d'erreurs
-```
-
-**Responsabilités :**
-- Configuration globale de l'application Express
-- Initialisation des middlewares de sécurité
-- Enregistrement des routes principales
-- Démarrage du serveur HTTP
-- Gestion des erreurs au niveau application
-
-##### 2. **Couche de routage (`routes/`)**
-
-```javascript
-// userRoutes.js - Définition des endpoints et de leurs middlewares
-router.get('/profile', authMiddleware, userController.getProfile);
-router.put('/profile', authMiddleware, updateProfileValidation, userController.updateProfile);
-```
-
-**Responsabilités :**
-- Définition des endpoints RESTful (`GET /api/users/profile`)
-- Association des URL aux contrôleurs appropriés
-- Orchestration des middlewares par route (authentification, validation)
-- Respect des conventions REST (méthodes HTTP, nommage des ressources)
-
-##### 3. **Couche middleware (`middleware/`)**
-
-Les middlewares sont des **fonctions interceptrices** qui s'exécutent avant les contrôleurs :
-
-**`auth.js` - Authentification :**
-```javascript
-// Vérifie le token JWT et enrichit req.user
-const authMiddleware = async (req, res, next) => {
-  const token = req.header('Authorization');
-  const decoded = jwt.verify(token, secret);
-  req.user = decoded;  // Enrichit la requête
-  next();              // Passe au middleware suivant
-}
-```
-
-**`validation.js` - Validation des données :**
-```javascript
-// Valide les données d'entrée avec express-validator
-const updateProfileValidation = [
-  body('email').isEmail(),
-  body('username').isLength({ min: 3 })
-];
-```
-
-**Responsabilités :**
-- **Authentification** : Vérification des tokens JWT
-- **Autorisation** : Contrôle des permissions (admin, user)
-- **Validation** : Vérification de la conformité des données d'entrée
-- **Gestion d'erreurs** : Interception et formatage des erreurs
-- **Sécurité** : Rate limiting, CORS, headers sécurisés
-
-##### 4. **Couche contrôleurs (`controllers/`)**
-
-```javascript
-// authController.js - HTTP uniquement : délègue au service
-export const register = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-
-  const data = await authService.register(req.body);
-  res.status(201).json({ success: true, data });
-};
-```
-
-**Responsabilités :**
-- **Orchestration HTTP** : validation d'entrée, appel au **service**, réponse JSON
-- **Codes de statut HTTP** : choix approprié des codes de retour
-- **Pas de modèle ni de repository** : le contrôleur ne crée pas de `User` et n'écrit pas en base
-
-##### 5. **Couche services (`services/`) — l'orchestrateur métier**
-
-```javascript
-// authService.js - Seul endroit qui combine Model + Repository
-export const register = async ({ username, email, password }) => {
-  const existing = await userRepository.findOne({ email });
-  if (existing) throw new AuthError('Email déjà utilisé', 400);
-
-  const user = new User({ username, email, password });
-  await user.hashPassword();                 // comportement du modèle
-  await userRepository.save(user);           // persistance via repository
-  return { user: user.toJSON(), token: generateToken(user.id) };
-};
-```
-
-**Responsabilités :**
-- **Règles métier** : unicité email/username, mots de passe, JWT…
-- **Orchestration** : crée / manipule le **modèle**, appelle le **repository**
-- **Indépendance HTTP** : pas de `req` / `res` ici
-
-##### 6. **Couche modèles (`models/`) — l'entité métier (indépendante)**
-
-```javascript
-// User.js - Représentation d'un utilisateur (SANS persistance)
-class User {
-  constructor(userData) {
-    this.id = userData.id || Date.now().toString();
-    this.username = userData.username;
-    this.email = userData.email;
-    this.password = userData.password;
-    // ...
-  }
-
-  async hashPassword() { /* comportement de l'entité */ }
-  async comparePassword(candidate) { /* ... */ }
-  toJSON() { /* exclut le mot de passe */ }
-}
-```
-
-**Responsabilités :**
-- **Représentation des données** : structure des entités métier (`id`, `email`, `role`…)
-- **Comportement de l'entité** : hashage / comparaison de mot de passe, sérialisation
-- **Indépendance totale** : n'importe ni repository ni service ; aucun `fs` / SQL / MongoDB
-
-##### 7. **Couche repositories (`repositories/`) — l'accès aux données**
-
-```javascript
-// UserRepository.js - Seule couche qui parle au stockage
-class UserRepository {
-  async save(user) { /* écrit dans le fichier JSON (ou la DB) */ }
-  async findById(id) { /* lit et retourne new User(...) */ }
-  async findOne(criteria) { /* ... */ }
-  async findByIdAndUpdate(id, updates) { /* ... */ }
-}
-```
-
-**Responsabilités :**
-- **Persistance** : Create, Read, Update, Delete
-- **Hydratation** : reconstruire des instances `User` à partir des données brutes
-- **Pas de règles métier** : pas de hashage, pas de JWT, pas de contrôle d'unicité métier
-
-::: warning Pourquoi séparer model et repository ?
-Si demain on remplace le fichier JSON par MongoDB, on **ne touche qu'au repository**.  
-Le modèle `User`, les services et les contrôleurs restent identiques.
-:::
-
-##### 8. **Couche utilitaires (`utils/`)**
-
-```javascript
-// logger.js - Fonctions d'aide transversales
-const logger = {
-  info: (message) => console.log(`[INFO] ${message}`),
-  error: (message) => console.error(`[ERROR] ${message}`)
-};
-```
-
-**Responsabilités :**
-- **Fonctions utilitaires** : helpers réutilisables dans toute l'application
-- **Configuration** : paramètres globaux, constantes
-- **Logging** : système de journalisation
-
-#### Flux de données dans l'architecture
-
-```
-1. Requête HTTP → app.js (middlewares globaux)
-2. Routage → routes/ (middlewares spécifiques)
-3. Middleware → middleware/ (auth, validation)
-4. Contrôleur → controllers/ (HTTP)
-5. Service → services/ (règles métier + orchestration)
-6. Repository → repositories/ (persistance)
-7. Model → models/ (entité en mémoire, hydratée par le repo)
-8. Réponse ← formatée par le contrôleur
-```
-
-**Exemple concret : `PUT /api/users/profile`**
-
-1. **app.js** : Applique les middlewares globaux (helmet, cors)
-2. **userRoutes.js** : Route vers `authMiddleware` → `updateProfileValidation` → `userController.updateProfile`
-3. **auth.js** : Vérifie le token JWT, enrichit `req.user`
-4. **validation.js** : Valide les données du body
-5. **userController.js** : Appelle `userService.updateProfile(...)`
-6. **userService.js** : Applique les règles (unicité…) puis délègue au repository
-7. **UserRepository.js** : Charge / met à jour / sauvegarde ; retourne un `User`
-8. **Réponse** : Le contrôleur renvoie le profil mis à jour
-
-Cette architecture garantit :
-- **Séparation des responsabilités** : Model indépendant, Service orchestrateur, Repository = stockage
-- **Maintenabilité** : changer de stockage = modifier uniquement le repository
-- **Testabilité** : mock du repository pour tester le service sans fichiers / DB
-- **Réutilisabilité** : middlewares, services et repositories réutilisables
-- **Scalabilité** : ajout facile de nouvelles fonctionnalités
-
-### 2.2 Implémentation complète avec sécurité et bonnes pratiques
-
-#### Configuration de base de l'application
+#### Configuration et point d’entrée
 
 ::: details api-project/package.json
 <!-- @include:start api-project/package.json -->
@@ -1551,9 +614,8 @@ Cette architecture garantit :
 ```
 <!-- @include:end api-project/package.json -->
 :::
-<!-- @include:end api-project/package.json -->
 
-::: details Configuration principale (src/app.js)
+::: details src/app.js
 <!-- @include:start api-project/src/app.js -->
 ```javascript
 import express from 'express';
@@ -1611,19 +673,7 @@ export const close = () => server.close();
 <!-- @include:end api-project/src/app.js -->
 :::
 
-#### Modèle, repository et service (stockage JSON)
-
-Dans cette section, nous utilisons un système de stockage basé sur des fichiers JSON. Cette approche est idéale pour :
-- **Apprentissage** : Se concentrer sur les concepts REST sans la complexité d'une base de données
-- **Prototypage rapide** : Démarrer rapidement sans configuration de base de données
-- **Environnements simples** : Applications légères ou environnements de développement
-
-La séparation est volontairement explicite :
-- **`models/User.js`** : entité indépendante (champs + comportements)
-- **`repositories/UserRepository.js`** : lecture / écriture JSON + hydratation `User`
-- **`services/authService.js` et `userService.js`** : règles métier ; seuls à combiner modèle et repository
-
-Quand on passera à une vraie base de données (chapitre suivant), on remplacera surtout le **repository** ; modèle et services restent conceptuellement les mêmes.
+#### Model, repository, services
 
 ::: details src/models/User.js
 <!-- @include:start api-project/src/models/User.js -->
@@ -1954,13 +1004,7 @@ export default { getProfile, updateProfile, getUsers };
 <!-- @include:end api-project/src/services/userService.js -->
 :::
 
-
-#### Contrôleurs : orchestration HTTP via le service
-
-Les contrôleurs ne parlent **ni** au fichier JSON **ni** directement au modèle / repository. Ils :
-1. valident la requête HTTP ;
-2. délèguent toute la logique métier au **service** ;
-3. formatent la réponse JSON.
+#### Controllers
 
 ::: details src/controllers/authController.js
 <!-- @include:start api-project/src/controllers/authController.js -->
@@ -2134,7 +1178,9 @@ export default { getProfile, updateProfile, getUsers };
 <!-- @include:end api-project/src/controllers/userController.js -->
 :::
 
-### 2.2 Middlewares de sécurité et validation
+#### Middlewares
+
+Les middlewares d’auth / admin peuvent interroger le **repository** (besoin technique de charger l’utilisateur) ; la logique métier reste dans les services.
 
 ::: details src/middleware/auth.js
 <!-- @include:start api-project/src/middleware/auth.js -->
@@ -2198,7 +1244,7 @@ const authMiddleware = async (req, res, next) => {
 export default authMiddleware;
 ```
 <!-- @include:end api-project/src/middleware/auth.js -->
-
+:::
 
 ::: details src/middleware/validation.js
 <!-- @include:start api-project/src/middleware/validation.js -->
@@ -2342,7 +1388,7 @@ export default adminMiddleware;
 <!-- @include:end api-project/src/middleware/admin.js -->
 :::
 
-### 2.3 Routes et structure de l'API
+#### Routes
 
 ::: details src/routes/authRoutes.js
 <!-- @include:start api-project/src/routes/authRoutes.js -->
@@ -2389,7 +1435,7 @@ export default router;
 <!-- @include:end api-project/src/routes/userRoutes.js -->
 :::
 
-### 2.4 Tests automatisés
+#### Tests
 
 ::: details tests/api.test.js
 <!-- @include:start api-project/tests/api.test.js -->
@@ -2473,27 +1519,88 @@ afterAll(() => {
 <!-- @include:end api-project/tests/api.test.js -->
 :::
 
-Cette implémentation complète démontre tous les concepts RESTful et de sécurité abordés dans la partie théorique, avec une architecture moderne et scalable utilisant Node.js et Express.
+---
 
+## 5. Hygiène d’une API : validation, erreurs, rate limiting
 
-## 3. Exercices pratiques
+Ces mécanismes protègent l’API au quotidien. Pour la surface d’attaque complète (XSS, CSRF, headers, HTTPS…) : [séance 9](./9_securite.md).
 
-### Exercice 1 : Extension de l'API
-Étendez l'API de gestion d'utilisateurs en ajoutant un système de changement de mot de passe.
+### 5.1 Validation des entrées
 
+Le projet utilise **express-validator** (voir `middleware/validation.js` ci-dessus).
+
+Exemple de règles :
+
+```javascript
+import { body, validationResult } from 'express-validator';
+
+const validateRegister = [
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 8 }),
+  body('username').trim().isLength({ min: 3, max: 30 })
+];
+
+const handleValidation = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+  next();
+};
+```
+
+::: details Alternative : Joi
+```javascript
+import Joi from 'joi';
+
+const schema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).required()
+});
+
+const { error, value } = schema.validate(req.body);
+if (error) return res.status(400).json({ error: error.details });
+```
+:::
+
+### 5.2 Gestion d’erreurs
+
+Centraliser les erreurs évite de répéter `try/catch` partout avec des formats incohérents. Dans le projet, le service lève des erreurs métier (`AuthError`, `UserError` avec un `status`) ; le contrôleur les traduit en JSON HTTP. Un middleware `errorHandler` rattrape le reste.
+
+### 5.3 Rate limiting
+
+Limite le nombre de requêtes pour freiner abus et brute-force sur `/api/auth` :
+
+```javascript
+import rateLimit from 'express-rate-limit';
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true
+});
+
+app.use('/api', globalLimiter);
+app.use('/api/auth', authLimiter);
+```
+
+---
+
+## 6. Exercices pratiques
+
+### Exercice 1 : Extension de l’API
+
+Étendez l’API de gestion d’utilisateurs en ajoutant un **changement de mot de passe** (idéalement : route → controller → **service** → repository / modèle). Une solution est disponible dans `api-project-solution`.
 
 ### Exercice 2 : Tests automatisés
-Testez toutes les routes de l'API en utilisant Jest et Supertest pour assurer la robustesse et la fiabilité de l'application (seules 2 sont testées pour le moment).
+
+Testez toutes les routes avec Jest et Supertest (seules quelques-unes sont couvertes pour l’instant). Voir aussi la [séance 8 — Tests](./8_tests.md).
 
 ### Exercice 3 : Documentation API
-Créez une documentation complète de votre API en utilisant Swagger.
 
-
-
-
-
-
-
-
-
-
+Documentez l’API avec Swagger / OpenAPI (exemple dans `api-project-solution`).

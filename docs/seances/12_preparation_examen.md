@@ -709,7 +709,7 @@ app.post('/comments', (req, res) => {
 ---
 
 ### Question 59
-Expliquez la stratégie de refresh token. Pourquoi utilise-t-on deux tokens (access token et refresh token) au lieu d'un seul JWT à longue durée de vie ? Décrivez le flux complet lorsqu'un access token expire.
+Expliquez la stratégie de refresh token *(approfondissement : séance 9)*. Pourquoi utilise-t-on deux tokens (access token et refresh token) au lieu d'un seul JWT à longue durée de vie ? Décrivez le flux complet lorsqu'un access token expire.
 
 ---
 

@@ -36,10 +36,10 @@ Vous serez amené à :
 3. Node.js et JavaScript côté serveur
 4. Création de serveurs web et gestion des routes
 5. Introduction à Express.js
-6. Conception d’API REST
+6. Conception d’APIs RESTful (architecture en couches, JWT de base)
 7. Introduction aux bases de données
-8. Sécurité des applications web
-9. Tests et bonnes pratiques
+8. Tests et bonnes pratiques
+9. Sécurité des applications web (approfondissement)
 10. Progressive Web Apps (PWA) et architectures modernes
 11. Conclusion et perspectives
 12. Préparation à l'examen final
