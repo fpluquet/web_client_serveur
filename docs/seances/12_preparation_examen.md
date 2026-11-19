@@ -10,6 +10,10 @@ Cependant, **tous les sujets abordés dans ce questionnaire seront évalués** �
 2. **Comprendre un code existant** : Analyser du code fourni, identifier les problèmes, expliquer ce qui se passe, etc.
 3. **Produire du code** : Écrire du code fonctionnel pour résoudre un problème donné (middlewares, validations, authentification, etc.)
 
+::: tip 📌 Matière de l'examen
+La liste détaillée des concepts à connaître, à comprendre dans les grandes lignes ou hors matière est disponible ici : **[Checklist de la matière d'examen](./matiere_examen)**.
+:::
+
 ### 📚 Conseils pour étudier
 
 - Travaillez sur chaque question attentivement
