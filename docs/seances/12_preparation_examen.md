@@ -24,11 +24,16 @@ Cependant, **tous les sujets abordés dans ce questionnaire seront évalués** �
 ## 1. Architecture Client-Serveur, URL et HTTP
 
 ### Question 1
-Dans une URL comme `https://api.monsite.com:8080/users/123?sort=name&limit=10#details`, identifiez et décrivez le rôle de chaque composant (schéma, host, port, chemin, paramètres de requête, fragment).
+Quels sont les rôles respectifs du client et du serveur dans une application web ? Dessinez le diagramme de séquence de l'interaction suivante : un utilisateur ouvre la page `/products` d'une SPA ; le navigateur reçoit le HTML, puis le JavaScript appelle `GET /api/products` et affiche la liste.
 
 ---
 
 ### Question 2
+Dans une URL comme `https://api.monsite.com:8080/users/123?sort=name&limit=10#details`, identifiez et décrivez le rôle de chaque composant (schéma, host, port, chemin, paramètres de requête, fragment).
+
+---
+
+### Question 3
 Analysez l'URL suivante et répondez aux questions :
 ```
 https://shop.example.com:443/api/v2/products/books?author=Tolkien&year=1954&format=hardcover#reviews
@@ -39,12 +44,17 @@ c) Le fragment `#reviews` est-il envoyé au serveur ?
 
 ---
 
-### Question 3
+### Question 4
+Pourquoi certains caractères doivent-ils être encodés dans une URL (percent-encoding) ? Que se passerait-il si le `&` n'était pas encodé ?
+
+---
+
+### Question 5
 Quelle est la différence entre les paramètres de route (`:id`) et les query parameters (`?param=value`) dans une URL ? Donnez un exemple d'utilisation appropriée pour chacun.
 
 ---
 
-### Question 4
+### Question 6
 Pour chacune des URL suivantes, indiquez quelle route Express correspondrait et quelles seraient les valeurs des paramètres :
 
 a) `GET /users/42/posts/15/comments`
@@ -53,12 +63,17 @@ c) `GET /products/electronics/laptops`
 
 ---
 
-### Question 5
+### Question 7
 Expliquez la différence entre les codes de statut HTTP 4XX (400, 401, ...) et 5XX (500, 501, ...). Dans quel contexte utiliseriez-vous chacun d'eux ?
 
 ---
 
-### Question 6
+### Question 8
+Quelle est la différence entre les codes `301 Moved Permanently` et `302 Found` ? Quel en-tête accompagne ces réponses et comment le navigateur réagit-il ?
+
+---
+
+### Question 9
 Quelle méthode HTTP devriez-vous utiliser pour chacune de ces opérations dans une API REST ?
 - Récupérer la liste de tous les produits
 - Créer un nouvel utilisateur
@@ -67,7 +82,7 @@ Quelle méthode HTTP devriez-vous utiliser pour chacune de ces opérations dans 
 
 ---
 
-### Question 7
+### Question 10
 Analysez la requête HTTP suivante et identifiez chaque composant (méthode, ...) :
 ```
 POST /api/users HTTP/1.1
@@ -81,7 +96,7 @@ Accept: application/json
 
 ---
 
-### Question 8
+### Question 11
 Analysez cette réponse HTTP et répondez aux questions :
 ```
 HTTP/1.1 201 Created
@@ -100,22 +115,31 @@ c) Expliquez chaque attribut du cookie (`HttpOnly`, `Secure`, `SameSite=Strict`)
 
 ## 2. Client Léger vs Client Lourd (SPA)
 
-### Question 9
+### Question 12
 Quelles sont les trois caractéristiques principales qui différencient une architecture client léger d'une architecture client lourd ?
 
 ---
 
-### Question 10
+### Question 13
 Dans une application client lourd (SPA), pourquoi est-il problématique pour le SEO (référencement) par défaut ? Quelle technique peut être utilisée pour résoudre ce problème ?
 
 ---
 
-### Question 11
+### Question 14
 Expliquez pourquoi une application client lourd a généralement une charge serveur moins élevée qu'une application client léger après le chargement initial.
 
 ---
 
-### Question 12
+### Question 15
+a) Citez les composants de l'architecture d'un client lourd (UI, actions/événements, router, services, state management) et décrivez le rôle de chacun.
+b) Pour chacune des applications suivantes, choisiriez-vous un client léger ou un client lourd ? Justifiez.
+- Le blog public d'une association
+- Un outil interne de gestion de stock avec tableaux filtrables et formulaires imbriqués
+- Une messagerie en temps réel
+
+---
+
+### Question 16
 Dans une SPA, expliquez pourquoi on utilise `window.history.pushState()` au lieu de simplement changer `window.location.href` :
 
 ```javascript
@@ -127,14 +151,16 @@ link.addEventListener('click', (e) => {
 });
 ```
 
+Que se passe-t-il lorsque l'utilisateur clique ensuite sur le bouton « Précédent » du navigateur ? Quel événement faut-il écouter pour réafficher la bonne vue ?
+
 ---
 
-### Question 13
+### Question 17
 Quelle est la différence entre `textContent` et `innerHTML` ? Pourquoi `textContent` est-il préférable pour afficher des données utilisateur du point de vue de la sécurité ?
 
 ---
 
-### Question 14
+### Question 18
 Dans ce code côté client, expliquez le rôle de `async/await` et de `try/catch` :
 
 ```javascript
@@ -154,23 +180,69 @@ async function fetchUsers() {
 
 ---
 
-## 3. Node.js
+### Question 19
+Comparez les mécanismes de stockage côté client : cookies, `localStorage`, `sessionStorage` (et, dans les grandes lignes, IndexedDB). Pour chacun : durée de vie, envoi automatique au serveur ou non, capacité, API synchrone ou asynchrone.
 
-### Question 15
-Expliquez la différence entre la syntaxe CommonJS (`require`/`module.exports`) et la syntaxe ES Modules (`import`/`export`). Comment active-t-on les ES Modules dans un projet Node.js ?
+Quel mécanisme choisiriez-vous pour :
+a) le thème clair/sombre choisi par l'utilisateur ;
+b) un brouillon de formulaire qui ne doit pas survivre à la fermeture de l'onglet ;
+c) un identifiant de session que le serveur doit recevoir à chaque requête ;
+d) plusieurs milliers d'articles à consulter hors ligne ?
 
 ---
 
-### Question 16
+### Question 20
+Analysez l'en-tête suivant, envoyé par `https://www.example.com` :
+
+```
+Set-Cookie: theme=dark; Max-Age=2592000; Path=/; Domain=example.com; Secure; SameSite=Lax
+```
+
+a) Que signifie chaque attribut ? Quelle est la différence entre `Max-Age` et `Expires` ?
+b) Le cookie sera-t-il envoyé à `https://api.example.com/settings` ? Et à `http://www.example.com/` ?
+c) Ce cookie est-il lisible via `document.cookie` ? Pourquoi ?
+
+---
+
+## 3. Node.js
+
+### Question 21
+Node.js est décrit comme *single-threaded, asynchrone et événementiel*. Expliquez ces trois termes.
+
+Quel est l'ordre d'affichage du code suivant, et pourquoi ?
+
+```javascript
+console.log('A');
+setTimeout(() => console.log('B'), 0);
+console.log('C');
+```
+
+Comment un serveur Node.js peut-il traiter de nombreuses requêtes simultanées avec un seul thread ?
+
+---
+
+### Question 22
+Expliquez la différence entre la syntaxe CommonJS (`require`/`module.exports`) et la syntaxe ES Modules (`import`/`export`). Comment active-t-on les ES Modules dans un projet Node.js ?
+
+Pourquoi `__dirname` n'est-il pas disponible en ES Modules, et comment le reconstruire ?
+
+---
+
+### Question 23
 Quelle est la différence entre `fs.readFileSync()` et `fs.readFile()` ? Pourquoi devrait-on généralement préférer la version asynchrone dans un serveur web ?
 
 ---
 
-### Question 17
-Dans le fichier `package.json` ci-dessous, expliquez la différence entre `dependencies` et `devDependencies`. Quelle commande installe uniquement les `dependencies` ?
+### Question 24
+Analysez le fichier `package.json` ci-dessous :
 
 ```json
 {
+  "type": "module",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
   "dependencies": {
     "express": "^4.18.2",
     "mariadb": "^3.2.0"
@@ -182,16 +254,55 @@ Dans le fichier `package.json` ci-dessous, expliquez la différence entre `depen
 }
 ```
 
+a) Expliquez la différence entre `dependencies` et `devDependencies`. Quelle commande installe uniquement les `dependencies` ?
+b) Quelle commande lance chaque script ? À quoi sert `nodemon` ?
+c) Que se passe-t-il quand on exécute `npm install` ? Où sont placés les packages ?
+
+---
+
+### Question 25
+On lance le programme suivant avec `node calc.js add 3 5`. Que contient `process.argv` ? Complétez le code pour afficher la somme des deux nombres.
+
+```javascript
+// calc.js
+const args = process.argv;
+// ...
+```
+
 ---
 
 ## 4. Express.js et Middlewares
 
-### Question 18
+### Question 26
+Voici un serveur écrit avec le module `http` natif :
+
+```javascript
+import http from 'node:http';
+
+const server = http.createServer((req, res) => {
+  if (req.method === 'GET' && req.url === '/hello') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Hello');
+  } else {
+    res.writeHead(404);
+    res.end('Not found');
+  }
+});
+
+server.listen(3000);
+```
+
+a) Quelles sont les limites de cette approche lorsque l'application grandit ?
+b) Réécrivez ce serveur avec Express.
+
+---
+
+### Question 27
 Qu'est-ce qu'un middleware dans Express.js ? Décrivez les trois paramètres qu'il reçoit et expliquez l'importance de la fonction `next()`.
 
 ---
 
-### Question 19
+### Question 28
 Dans le code Express suivant, expliquez pourquoi l'ordre des middlewares est important :
 ```javascript
 app.use(express.json());
@@ -207,22 +318,22 @@ app.use((req, res) => {
 
 ---
 
-### Question 20
+### Question 29
 Quelle est la différence entre `app.use()` et `app.get()` dans Express.js ?
 
 ---
 
-### Question 21
+### Question 30
 À quoi servent les routers Express (`express.Router()`) ? Quel problème résolvent-ils dans une application de grande taille ?
 
 ---
 
-### Question 22
+### Question 31
 Expliquez ce que fait le middleware `express.static('public')` et dans quel contexte l'utilise-t-on.
 
 ---
 
-### Question 23
+### Question 32
 Analysez le code suivant et indiquez ce qui sera affiché dans la console et envoyé au client pour une requête `GET /test` :
 
 ```javascript
@@ -245,7 +356,7 @@ app.use((req, res, next) => {
 
 ---
 
-### Question 24
+### Question 33
 Identifiez le(s) problème(s) dans ce code et proposez une correction :
 
 ```javascript
@@ -259,7 +370,7 @@ app.get('/users/:id', async (req, res) => {
 
 ---
 
-### Question 25
+### Question 34
 Expliquez la différence de comportement entre ces deux middlewares de gestion d'erreur :
 
 ```javascript
@@ -276,7 +387,7 @@ app.use((err, req, res, next) => {
 
 ---
 
-### Question 26
+### Question 35
 Dans le code suivant, quelle sera la réponse pour `GET /api/users/abc` (où `abc` n'est pas un nombre valide) ?
 
 ```javascript
@@ -297,7 +408,7 @@ app.get('/api/users/:id', (req, res) => {
 
 ---
 
-### Question 27
+### Question 36
 Expliquez ce que fait ce code et pourquoi `parseInt(req.query.page) || 1` est utilisé :
 
 ```javascript
@@ -312,7 +423,7 @@ app.get('/products', (req, res) => {
 
 ---
 
-### Question 28
+### Question 37
 Dans ce code de router, quelle URL complète déclencherait la route qui affiche "Commentaire trouvé" ?
 
 ```javascript
@@ -332,7 +443,7 @@ app.use('/api/posts', postRoutes);
 
 ---
 
-### Question 29
+### Question 38
 Analysez le code Express suivant et expliquez ce qui se passe lors d'une requête `GET /api/products/electronics?page=2` :
 
 ```javascript
@@ -366,12 +477,19 @@ app.use('/api/products', productsRouter);
 
 ## 5. API REST
 
-### Question 30
+### Question 39
+Citez et expliquez les six contraintes de l'architecture REST.
+
+Pour la contrainte *cacheable* : à quoi servent les en-têtes `Cache-Control` et `ETag` ? Que renvoie le serveur si la ressource n'a pas changé depuis l'`ETag` fourni par le client ?
+
+---
+
+### Question 40
 Qu'est-ce que le principe "stateless" (sans état) dans une architecture REST ? Pourquoi est-ce important pour la scalabilité ?
 
 ---
 
-### Question 31
+### Question 41
 Dans le code suivant, expliquez comment récupérer l'ID de l'utilisateur et les paramètres de tri :
 ```javascript
 // URL: /api/users/42?sort=name&order=desc
@@ -382,17 +500,17 @@ app.get('/api/users/:id', (req, res) => {
 
 ---
 
-### Question 32
+### Question 42
 Qu'est-ce que HATEOAS et quel avantage apporte-t-il à une API REST ? Donnez un exemple concret de réponse contenant des liens HATEOAS.
 
 ---
 
-### Question 33
+### Question 43
 Dans une API REST, quelle est la différence entre les méthodes PUT et PATCH pour mettre à jour une ressource ?
 
 ---
 
-### Question 34
+### Question 44
 Expliquez ce que fait la pagination dans cette réponse API et à quoi servent les liens `_links` :
 
 ```json
@@ -415,14 +533,33 @@ Expliquez ce que fait la pagination dans cette réponse API et à quoi servent l
 
 ---
 
-## 6. Validation, Fichiers et Configuration
+### Question 45
+Les routes suivantes ne respectent pas les bonnes pratiques REST. Identifiez les problèmes et proposez des routes correctes, versionnées en `v1` :
 
-### Question 35
+```
+GET  /api/getUsers
+POST /api/createUser
+POST /api/deleteUser/12
+GET  /api/user/12/getOrders
+```
+
+Pourquoi versionner une API ? Citez deux façons de le faire.
+
+---
+
+### Question 46
+Pourquoi utilise-t-on souvent un JWT plutôt qu'une session serveur pour authentifier les appels à une API REST ? Comparez les deux approches sur trois critères : état côté serveur, scalabilité (plusieurs instances) et révocation.
+
+---
+
+## 6. Validation, Fichiers et Documentation
+
+### Question 47
 Expliquez pourquoi il est important de valider les données côté serveur même si une validation existe côté client. Donnez un exemple de code utilisant `express-validator` pour valider un formulaire d'inscription (email valide, mot de passe d'au moins 8 caractères).
 
 ---
 
-### Question 36
+### Question 48
 Analysez ce code de validation et expliquez ce que fait chaque validateur :
 
 ```javascript
@@ -445,37 +582,49 @@ app.post('/users',
 
 ---
 
-### Question 37
-Qu'est-ce qu'un fichier `.env` et pourquoi est-il utilisé dans les applications Node.js ? Expliquez pourquoi ce fichier ne doit jamais être commité dans un dépôt Git et quelle alternative utilise-t-on pour documenter les variables nécessaires.
-
----
-
-### Question 38
-Analysez ce code et expliquez comment les variables d'environnement sont utilisées :
+### Question 49
+Analysez ce mécanisme de gestion d'erreurs :
 
 ```javascript
-import 'dotenv/config';
-
-const config = {
-  port: process.env.PORT || 3000,
-  dbHost: process.env.DB_HOST,
-  dbPassword: process.env.DB_PASSWORD,
-  jwtSecret: process.env.JWT_SECRET,
-  nodeEnv: process.env.NODE_ENV || 'development'
-};
-
-if (!config.jwtSecret) {
-  throw new Error('JWT_SECRET is required');
+// errors/UserError.js
+export class UserError extends Error {
+  constructor(message, status = 400) {
+    super(message);
+    this.status = status;
+  }
 }
+
+// services/userService.js
+export async function register({ email, password }) {
+  const existing = await userRepository.findOne({ email });
+  if (existing) {
+    throw new UserError('Email déjà utilisé', 409);
+  }
+  // ...
+}
+
+// middleware/errorHandler.js
+export function errorHandler(err, req, res, next) {
+  const status = err.status || 500;
+  res.status(status).json({
+    success: false,
+    error: status === 500 ? 'Erreur serveur' : err.message
+  });
+}
+
+// app.js
+app.use('/api', apiRoutes);
+app.use(errorHandler);
 ```
 
-a) Que fait `|| 3000` dans la ligne du port ?
-b) Pourquoi vérifie-t-on si `jwtSecret` existe ?
-c) Quel fichier contiendrait les vraies valeurs de ces variables ?
+a) Pourquoi le service lance-t-il une erreur au lieu d'appeler `res.status(409)` ?
+b) Quelle réponse reçoit le client s'il s'inscrit avec un email déjà utilisé ?
+c) Et si le fichier de données est corrompu et que le repository lance une erreur inattendue ?
+d) Pourquoi `errorHandler` est-il enregistré en dernier ?
 
 ---
 
-### Question 39
+### Question 50
 Expliquez ce que fait le middleware `multer` dans ce code et à quoi servent les différentes options de configuration :
 
 ```javascript
@@ -512,19 +661,43 @@ app.post('/profile/avatar', upload.single('avatar'), (req, res) => {
 
 ---
 
-### Question 40
+### Question 51
 Qu'est-ce que Swagger (OpenAPI) ? Quels sont les avantages de documenter une API avec Swagger et comment les développeurs frontend peuvent-ils l'utiliser ?
 
 ---
 
 ## 7. Sécurité Web
 
-### Question 41
-Expliquez ce qu'est une attaque XSS (Cross-Site Scripting). Donnez un exemple de code vulnérable et expliquez comment le corriger.
+### Question 52
+Expliquez la triade CIA (confidentialité, intégrité, disponibilité) en donnant, pour chaque pilier, un exemple d'attaque qui le compromet.
+
+Illustrez ensuite chacun des principes suivants par un exemple concret dans une API Express : *security by design*, défense en profondeur, principe du moindre privilège.
 
 ---
 
-### Question 42
+### Question 53
+Qu'est-ce que l'OWASP Top 10 ? Le code suivant illustre une vulnérabilité de la catégorie A01 (Broken Access Control). Laquelle ? Comment la corriger ?
+
+```javascript
+app.get('/api/invoices/:id', authenticate, async (req, res) => {
+  const invoice = await invoiceRepository.findById(req.params.id);
+  res.json(invoice);
+});
+```
+
+---
+
+### Question 54
+Expliquez ce qu'est une attaque XSS (Cross-Site Scripting) et distinguez le XSS réfléchi, le XSS stocké et le XSS basé sur le DOM. De quel type relève le code suivant ? Comment le corriger ?
+
+```javascript
+const params = new URLSearchParams(window.location.search);
+document.getElementById('welcome').innerHTML = `Bonjour ${params.get('name')} !`;
+```
+
+---
+
+### Question 55
 Expliquez pourquoi ce code est vulnérable au XSS stocké et proposez une correction :
 
 ```javascript
@@ -546,12 +719,12 @@ app.get('/comments', (req, res) => {
 
 ---
 
-### Question 43
-Qu'est-ce qu'une attaque CSRF (Cross-Site Request Forgery) ? Comment un token CSRF protège-t-il contre cette attaque ?
+### Question 56
+Qu'est-ce qu'une attaque CSRF (Cross-Site Request Forgery) ? Pourquoi touche-t-elle surtout les applications qui s'authentifient par cookie ? Expliquez comment un token CSRF et l'attribut `SameSite` protègent contre cette attaque.
 
 ---
 
-### Question 44
+### Question 57
 Dans le code suivant, identifiez la vulnérabilité d'injection SQL et proposez une correction :
 ```javascript
 app.get('/users', (req, res) => {
@@ -563,22 +736,22 @@ app.get('/users', (req, res) => {
 
 ---
 
-### Question 45
+### Question 58
 Quelle est la différence entre l'authentification (AuthN) et l'autorisation (AuthZ) ? Donnez un exemple concret pour illustrer chaque concept.
 
 ---
 
-### Question 46
+### Question 59
 Un JWT (JSON Web Token) est composé de trois parties. Nommez ces trois parties et expliquez brièvement le rôle de chacune.
 
 ---
 
-### Question 47
+### Question 60
 Dans un JWT, pourquoi est-il dangereux de stocker des informations sensibles dans le payload ? Donnez un exemple d'information qu'on ne devrait jamais y mettre.
 
 ---
 
-### Question 48
+### Question 61
 Analysez ce middleware d'authentification et expliquez dans quels cas il renvoie une erreur 401 vs 403 :
 
 ```javascript
@@ -604,38 +777,39 @@ function authMiddleware(req, res, next) {
 
 ---
 
-### Question 49
+### Question 62
 Pourquoi ne faut-il jamais stocker les mots de passe en clair dans une base de données ? Quelle technique utilise-t-on à la place et comment fonctionne-t-elle (expliquez le concept de "salt" et de "hachage") ?
 
 ---
 
-### Question 50
-Quelle est la différence entre le hachage avec `bcrypt` et le chiffrement avec `AES-256` ? Lequel utilise-t-on pour les mots de passe et pourquoi ?
+### Question 63
+Quelle est la différence entre **hacher** un mot de passe (avec `bcrypt`) et le **chiffrer** ? Pourquoi utilise-t-on le hachage pour les mots de passe ? Comment le serveur vérifie-t-il alors un mot de passe lors de la connexion ?
 
 ---
 
-### Question 51
+### Question 64
 Expliquez ce qu'est CORS (Cross-Origin Resource Sharing) et pourquoi il est nécessaire dans le contexte d'une API REST consommée par une application frontend sur un domaine différent.
 
 ---
 
-### Question 52
+### Question 65
 Dans le contexte de la sécurité des cookies, expliquez la différence entre les attributs `HttpOnly` et `Secure`. Pourquoi sont-ils importants ?
 
 ---
 
 ## 8. Architecture et bonnes pratiques
 
-### Question 53
+### Question 66
 Dans une bonne architecture pour une API Express, quelles sont les responsabilités respectives du **Controller**, du **Service**, du **Model** et du **Repository** ? Qui orchestre le Model et le Repository ? Pourquoi le Model doit-il rester indépendant ?
 
 ---
 
-### Question 54
+### Question 67
 Dans une bonne architecture pour une API Express, quelles sont les différentes couches par lesquelles une requête passe ? Décrivez brièvement le rôle de chaque couche et les dépendances (Router → Middleware → Controller → Service → Repository/Model).
+
 ---
 
-### Question 55
+### Question 68
 Analysez cette structure de projet et identifiez à quoi sert chaque dossier. Précisez qui appelle qui (`controllers/` → `services/` → …) :
 
 ```
@@ -651,9 +825,31 @@ src/
 
 ---
 
+### Question 69
+Ce contrôleur fonctionne, mais il viole plusieurs règles de l'architecture en couches. Identifiez les anti-patterns et indiquez dans quelle couche chaque responsabilité devrait se trouver. Quel problème de sécurité pose la réponse envoyée, et comment la méthode `toJSON()` du model le résout-elle ?
+
+```javascript
+// controllers/userController.js
+export async function register(req, res) {
+  const { email, password } = req.body;
+
+  const existing = await userRepository.findOne({ email });
+  if (existing) {
+    return res.status(409).json({ error: 'Email déjà utilisé' });
+  }
+
+  const hash = await bcrypt.hash(password, 10);
+  const user = await userRepository.save({ email, password: hash });
+
+  res.status(201).json(user);
+}
+```
+
+---
+
 ## 9. Sécurité avancée
 
-### Question 56
+### Question 70
 Qu'est-ce que le rate limiting et pourquoi est-il important pour la sécurité d'une API ? Analysez ce code et expliquez ce qu'il fait :
 
 ```javascript
@@ -679,41 +875,43 @@ app.use('/api/auth/login', loginLimiter);
 
 ---
 
-### Question 57
+### Question 71
 Qu'est-ce que la sanitization des données et pourquoi est-elle complémentaire à la validation ? Donnez des exemples de données qui pourraient nécessiter une sanitization avant d'être stockées ou affichées.
 
 ---
 
-### Question 58
-Analysez ce code de sanitization et expliquez ce que fait chaque ligne :
+### Question 72
+Analysez ce code de sanitization et expliquez ce qu'il fait :
 
 ```javascript
-import sanitizeHtml from 'sanitize-html';
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+
+const purify = DOMPurify(new JSDOM('').window);
 
 app.post('/comments', (req, res) => {
-  let comment = req.body.comment;
-  
-  // Sanitization
-  comment = comment.trim();
-  comment = sanitizeHtml(comment, {
-    allowedTags: ['b', 'i', 'em', 'strong'],
-    allowedAttributes: {}
+  let comment = req.body.comment.trim();
+
+  comment = purify.sanitize(comment, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong'],
+    ALLOWED_ATTR: []
   });
-  
-  // Stockage du commentaire sanitizé
+
   comments.push({ text: comment, date: new Date() });
   res.status(201).json({ message: 'Commentaire ajouté' });
 });
 ```
 
+Que devient le commentaire `<b>Super</b> <img src=x onerror="alert(1)">` ?
+
 ---
 
-### Question 59
+### Question 73
 Expliquez la stratégie de refresh token *(approfondissement : chapitre Sécurité)*. Pourquoi utilise-t-on deux tokens (access token et refresh token) au lieu d'un seul JWT à longue durée de vie ? Décrivez le flux complet lorsqu'un access token expire.
 
 ---
 
-### Question 60
+### Question 74
 Analysez ce système d'authentification avec refresh token et expliquez le rôle de chaque route :
 
 ```javascript
@@ -767,9 +965,11 @@ app.post('/auth/refresh', async (req, res) => {
 });
 ```
 
+Cette route `/auth/refresh` ne fait pas de **rotation** du refresh token. Qu'est-ce que la rotation ? Que permet-elle de détecter ? Comment modifieriez-vous la route pour la mettre en place ?
+
 ---
 
-### Question 61
+### Question 75
 Quels sont les différents endroits où un token JWT peut être stocké côté client ? Comparez les avantages et inconvénients de chaque approche en termes de sécurité *(voir chapitre Sécurité — [stockage JWT](./9_securite/auth#jwt-storage))* :
 
 | Stockage | Vulnérable au XSS ? | Vulnérable au CSRF ? |
@@ -782,7 +982,7 @@ Précisez aussi : en cas de XSS, un cookie `HttpOnly` empêche-t-il *toute* util
 
 ---
 
-### Question 62
+### Question 76
 Écrivez un middleware Express qui vérifie si l'utilisateur connecté a le rôle "admin" avant d'accéder à une route protégée. Le middleware doit :
 - Vérifier que `req.user` existe (utilisateur authentifié)
 - Vérifier que l'utilisateur a le rôle "admin"
@@ -790,7 +990,7 @@ Précisez aussi : en cas de XSS, un cookie `HttpOnly` empêche-t-il *toute* util
 
 ---
 
-### Question 63
+### Question 77
 Analysez ce système de middlewares d'authentification et d'autorisation, puis expliquez comment ils fonctionnent ensemble :
 
 ```javascript
